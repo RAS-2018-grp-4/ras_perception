@@ -6,7 +6,7 @@ print(cv2.__version__)
 
 def extractImages():
     count = 0
-    vidcap = cv2.VideoCapture('vid1.mp4')
+    vidcap = cv2.VideoCapture('vid2.mp4')
     success,image = vidcap.read()
     success = True
     while success:
