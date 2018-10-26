@@ -1,0 +1,5 @@
+classes = 16
+train = /home/driverless/ras_perception/ras_training_set.txt
+valid = /home/driverless/ras_perception/ras_validation_set.txt
+names = /home/driverless/ras_perception/ras_names.txt
+backup = backup/ras_test1/
