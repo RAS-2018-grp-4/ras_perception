@@ -17,7 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   tf
 )
-find_package(OpenCV)
+
+find_package(OpenCV REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -205,12 +206,12 @@ include_directories(
 # catkin_add_nosetests(test)
 
 
-include_directories(${OPENCV_INCLUDE_DIRS})
+#include_directories(${OPENCV_INCLUDE_DIRS})
 
 add_executable(ras_object_detection src/ras_object_detection.cpp) 
 
 
-target_link_libraries(ras_object_detection ${OpenCV_LIBRARIES})
+target_link_libraries(ras_object_detection ${OpenCV_LIBS})
 target_link_libraries(ras_object_detection ${catkin_LIBRARIES})
 
 
