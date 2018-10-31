@@ -6,6 +6,8 @@ geometry_msgs::PointStamped temp_point;
 
 void callback_pos(const geometry_msgs::PointStamped &msg)
 {
+  geometry_msgs::PointStamped transformed_point;
+  tf::transformPoint("map", msg, transformed_point);
   // //cout<<"REACHED";
   // ::temp_point.header.frame_id = "object";
 

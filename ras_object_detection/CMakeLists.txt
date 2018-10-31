@@ -208,7 +208,7 @@ include_directories(
 
 #include_directories(${OPENCV_INCLUDE_DIRS})
 
-add_executable(ras_object_detection src/ras_object_detection.cpp) 
+add_executable(ras_object_detection src/ras_object_detection.cpp)
 
 
 target_link_libraries(ras_object_detection ${OpenCV_LIBS})
