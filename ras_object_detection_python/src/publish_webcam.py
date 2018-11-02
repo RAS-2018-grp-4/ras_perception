@@ -12,7 +12,7 @@ capturedImage = rospy.Publisher("/webcam_image", Image, queue_size=10)
 
 r = rospy.Rate(20) # Hz 
 
-while(True):
+while not rospy.is_shutdown():
     # Capture frame-by-frame
     ret, frame = cap.read()
 
