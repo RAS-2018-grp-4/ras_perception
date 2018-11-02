@@ -22,7 +22,7 @@ while not rospy.is_shutdown():
     # Display the resulting frame
     cv2.imshow('frame',frame)
 
-    capturedImage.publish(CvBridge().cv2_to_imgmsg(frame))
+    capturedImage.publish(CvBridge().cv2_to_imgmsg(frame, encoding="bgr8"))
     
     r.sleep()
     
