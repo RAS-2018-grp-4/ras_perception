@@ -106,6 +106,7 @@ void maze_object::callback_inputDepth(const sensor_msgs::ImageConstPtr& msg)
     int x_pos = int(bBoxes[max_bBox_ind].x + bBoxes[max_bBox_ind].width/2);
     int y_pos = int(bBoxes[max_bBox_ind].y + bBoxes[max_bBox_ind].height/2);
     float z_world_temp = depth_input.at<float>(y_pos, x_pos);
+    z_world_temp = - z_world_temp;     // observation suggests so
     
     if(!isnan(z_world_temp))
     {
@@ -113,7 +114,7 @@ void maze_object::callback_inputDepth(const sensor_msgs::ImageConstPtr& msg)
 
     //cout<<"Depth at "<<x_pos<<" and "<<y_pos<<" is :\t"<<z_world<<"\n";
       // Calculate world coordinates
-      object_point.header.frame_id = "objects";
+      object_point.header.frame_id = "/camera_link";
 
       //we'll just use the most recent transform available for our simple example
       object_point.header.stamp = ros::Time();
