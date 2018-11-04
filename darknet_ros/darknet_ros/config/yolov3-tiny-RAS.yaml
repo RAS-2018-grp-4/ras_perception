@@ -1,9 +1,9 @@
 yolo_model:
 
   config_file:
-    name: yolov3-tiny-RAS.cfg
+    name: yolov3-tiny_xnor-RAS.cfg
   weight_file:
-    name: yolov3-tiny-RAS_40000.weights
+    name: yolov3-tiny_xnor-RAS_10400.weights
   threshold:
     value: 0.3
   detection_classes:

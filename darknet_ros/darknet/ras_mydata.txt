@@ -1,5 +1,5 @@
 classes = 16
-train = /home/ras14/catkin_ws/src/ras_perception/DL_training/ras_training_set.txt
-valid = /home/ras14/catkin_ws/src/ras_perception/DL_training/ras_validation_set.txt
-names = /home/ras14/catkin_ws/src/ras_perception/DL_training/ras_names.txt
+train = ras_training_set.txt
+valid = ras_validation_set.txt
+names = ras_names.txt
 backup = backup/ras_test2/
