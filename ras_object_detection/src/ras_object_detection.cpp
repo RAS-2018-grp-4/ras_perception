@@ -206,6 +206,7 @@ Rect maze_object::detectColor(Scalar min_val, Scalar max_val)
           ind_max = i;
         }
       }
+      //cout<<ctr_area<<endl<<endl;
 
       // find Bounding Box of largest contour
       bBox = boundingRect(Mat(contours[ind_max]));
