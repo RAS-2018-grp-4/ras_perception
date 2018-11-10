@@ -1,0 +1,2 @@
+geometry_msgs/PointStamped[] objects_detected
+uint8 number_of_objects
