@@ -1,5 +1,0 @@
-classes = 16
-train = ras_training_set.txt
-valid = ras_validation_set.txt
-names = ras_names.txt
-backup = backup/ras_test2/
