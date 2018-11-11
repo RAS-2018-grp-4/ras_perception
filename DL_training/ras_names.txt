@@ -1,0 +1,16 @@
+Obstacle
+Red Cube
+Red Hollow Cube
+Blue Cube
+Green Cube
+Yellow Cube
+Yellow Ball
+Red Ball
+Red Cylinder
+Green Cylinder
+Green Hollow Cube
+Blue Triangle
+Purple Cross
+Purple Star
+Orange Cross
+Patric 
