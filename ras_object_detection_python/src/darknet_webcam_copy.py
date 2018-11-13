@@ -4,13 +4,15 @@ import random
 import numpy as np 
 import cv2
 from datetime import datetime
-#import rospy 
-#from sensor_msgs.msg import Image
-#from cv_bridge import CvBridge
+import rospy 
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
 
 #rospy.init_node('publish_webcam', anonymous=True)
 
+###### GLOBAL VARIABLES
 cap = cv2.VideoCapture(0)
+last_frame = []
 
 def sample(probs):
     s = sum(probs)
@@ -192,7 +194,15 @@ def draw_results(res, img):
                     cv2.FONT_HERSHEY_SIMPLEX, 1.5, rand_color, thickness=5)
 
 
+def callback_webcam_image(img_msg):
+    global last_frame
+    bridge = CvBridge()
+    last_frame = bridge.imgmsg_to_cv2(img_msg, desired_encoding="passthrough") 
+
 if __name__ == "__main__":
+    global last_frame
+    rospy.init_node('publish_webcam', anonymous=True)
+    rospy.Subscriber("/webcam_image", Image, callback_webcam_image)
     #net = load_net("cfg/densenet201.cfg", "/home/pjreddie/trained/densenet201.weights", 0)
     #im = load_image("data/wolf.jpg", 0, 0)
     #meta = load_meta("cfg/imagenet1k.data")
@@ -204,7 +214,8 @@ if __name__ == "__main__":
     net = load_net("yolov2-nano1-RAS.cfg", "yolov2-nano1-RAS_1700.weights", 0)
     meta = load_meta("ras_mydata.txt")
 
-    while cap.isOpened():
+    while rospy.is_shutdown():
+    #while cap.isOpened():
         
         a = datetime.now()
 
