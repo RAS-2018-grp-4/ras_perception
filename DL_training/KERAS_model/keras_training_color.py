@@ -39,6 +39,8 @@ model_name = 'keras_RAS_model_color_2.h5'
 
 PATH_DATA = "/home/driverless/ras_perception/DL_training/image_dataset_keras_color/"
 
+
+
 def load_custom_data():
     x_list = []
     y_list = []
