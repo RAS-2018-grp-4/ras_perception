@@ -30,15 +30,16 @@ from sklearn.model_selection import train_test_split
 '''
 
 batch_size = 32
-num_classes = 6
+num_classes = 7
 epochs = 100
 data_augmentation = True
 num_predictions = 20
 save_dir = os.path.join(os.getcwd(), 'saved_models')
-model_name = 'keras_RAS_model_color_2.h5'
+model_name = 'keras_RAS_model_color_3.h5'
 
-PATH_DATA = "/home/driverless/ras_perception/DL_training/image_dataset_keras_color/"
+PATH_DATA = "../image_dataset_keras_color/"
 
+color_class = ['Yellow', 'Green', 'Orange', 'Red', 'Blue', 'Purple', 'Nothing']
 
 
 def load_custom_data():
@@ -63,6 +64,8 @@ def load_custom_data():
             label = 4
         elif dirname == 'Purple':
             label = 5
+        elif dirname == 'Nothing':
+            label = 6
 
         print('##########    ' + dirname + ' , Label : ' + str(label) + '      ##########')
         for file in glob.glob(PATH_DATA + dirname + "/*.jpg"):
@@ -194,3 +197,16 @@ print('Saved trained model at %s ' % model_path)
 scores = model.evaluate(x_test, y_test, verbose=1)
 print('Test loss:', scores[0])
 print('Test accuracy:', scores[1])
+
+for file in glob.glob('../RAS_DATASET'+ "/*.jpg"):
+    image = cv2.imread(file)
+
+    input_img = []
+    input_img.append(cv2.resize(image, (32,32)))
+    input_img = np.array(input_img)
+
+    prediction = model.predict(input_img)
+    #print('Actual: ' + str(dirname) + '     detected: ' + shape_class[np.argmax(prediction)])
+    print('detected: ' + color_class[np.argmax(prediction)])
+    cv2.imshow('image', cv2.resize(image, (640,480)))
+    cv2.waitKey(3000)

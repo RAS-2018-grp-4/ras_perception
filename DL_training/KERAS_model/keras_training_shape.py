@@ -35,11 +35,13 @@ It gets to 75% validation accuracy in 25 epochs, and 79% after 50 epochs.
 
 batch_size = 32
 num_classes = 7
-epochs = 200
+epochs = 100
 data_augmentation = True
 num_predictions = 20
 save_dir = os.path.join(os.getcwd(), 'saved_models')
-model_name = 'keras_RAS_model_shape_2.h5'
+model_name = 'keras_RAS_model_shape_4.h5'
+
+shape_class = ['Ball', 'Cube', 'Cylinder', 'Hollow Cube', 'Cross', 'Triangle', 'Star' ]
 
 PATH_DATA = "/home/driverless/ras_perception/DL_training/image_dataset_keras_shape/"
 # PATH_TRAIN = "/home/driverless/ras_perception/DL_training/image_dataset_keras_shape/Train/"
@@ -119,12 +121,12 @@ model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Dropout(0.25))
 
-# model.add(Conv2D(128, (3, 3), padding='same'))
-# model.add(Activation('relu'))
-# model.add(Conv2D(128, (3, 3)))
-# model.add(Activation('relu'))
-# model.add(MaxPooling2D(pool_size=(2, 2)))
-# model.add(Dropout(0.25))
+model.add(Conv2D(128, (3, 3), padding='same'))
+model.add(Activation('relu'))
+model.add(Conv2D(128, (3, 3)))
+model.add(Activation('relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(0.25))
 
 
 model.add(Flatten())
@@ -208,3 +210,16 @@ print('Saved trained model at %s ' % model_path)
 scores = model.evaluate(x_test, y_test, verbose=1)
 print('Test loss:', scores[0])
 print('Test accuracy:', scores[1])
+
+for file in glob.glob('../RAS_DATASET'+ "/*.jpg"):
+    image = cv2.imread(file)
+
+    input_img = []
+    input_img.append(cv2.resize(image, (32,32)))
+    input_img = np.array(input_img)
+
+    prediction = model.predict(input_img)
+    #print('Actual: ' + str(dirname) + '     detected: ' + shape_class[np.argmax(prediction)])
+    print('detected: ' + shape_class[np.argmax(prediction)])
+    cv2.imshow('image', cv2.resize(image, (640,480)))
+    cv2.waitKey(3000)
