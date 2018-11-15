@@ -17,11 +17,12 @@ from datetime import datetime
 6:  Star
 '''
 
-PATH_TEST = "/home/driverless/ras_perception/DL_training/image_dataset_keras_shape/Test/" 
-VIDEO_INFERENCE = 1 
-IMG_INFERNECE = 0
+#PATH_TEST = "/home/driverless/ras_perception/DL_training/image_dataset_keras_shape/Test/" 
+VIDEO_INFERENCE = 0
+IMG_INFERNECE = 1
 
-inference_model = keras.models.load_model('/home/driverless/ras_perception/DL_training/saved_models/keras_cifar10_trained_model.h5')
+model_shape = keras.models.load_model('./saved_models/keras_RAS_model_shape_1.h5')
+shape_class = ['Ball', 'Cube', 'Cylinder', 'Hollow Cube', 'Cross', 'Triangle', 'Star' ]
 
 if VIDEO_INFERENCE:    
     #cap = cv2.VideoCapture('/home/driverless/ras_perception/DL_training/ras_labeling')
@@ -37,8 +38,8 @@ if VIDEO_INFERENCE:
             input_img.append(cv2.resize(image, (32,32)))
             input_img = np.array(input_img)
 
-            prediction = inference_model.predict(input_img)
-            print(prediction)
+            prediction = model_shape.predict(input_img)
+            print(shape_class[np.argmax(prediction)])
 
             cv2.imshow('image', image)
             cv2.waitKey(10)
@@ -51,37 +52,39 @@ if VIDEO_INFERENCE:
 
 elif IMG_INFERNECE:
     try:
-        while True:
-            label = np.random.randint(0,7)
+        # while True:
+        #     label = np.random.randint(0,7)
 
-            if label == 0:
-                dirname = 'Ball'       
-            elif label == 1:
-                dirname = 'Cube'
-            elif label == 2:
-                dirname = 'Cylinder'
-            elif label == 3:
-                dirname = 'Hollow Cube'
-            elif label == 4:
-                dirname = 'Cross'
-            elif label == 5:
-                dirname = 'Triangle'
-            elif label == 6:
-                dirname = 'Star'
+        #     if label == 0:
+        #         dirname = 'Ball'       
+        #     elif label == 1:
+        #         dirname = 'Cube'
+        #     elif label == 2:
+        #         dirname = 'Cylinder'
+        #     elif label == 3:
+        #         dirname = 'Hollow Cube'
+        #     elif label == 4:
+        #         dirname = 'Cross'
+        #     elif label == 5:
+        #         dirname = 'Triangle'
+        #     elif label == 6:
+        #         dirname = 'Star'
 
-            for file in glob.glob(PATH_TEST + dirname + "/*.jpg"):
-                image = cv2.imread(file)
+        for file in glob.glob('../RAS_DATASET'+ "/*.jpg"):
+            image = cv2.imread(file)
 
-                input_img = []
-                input_img.append(cv2.resize(image, (32,32)))
-                input_img = np.array(input_img)
+            input_img = []
+            input_img.append(cv2.resize(image, (32,32)))
+            input_img = np.array(input_img)
 
-                prediction = inference_model.predict(input_img)
-                print('Actual: ' + str(dirname) + '     detected: ' + str(prediction))
-                cv2.waitKey(3000)
+            prediction = model_shape.predict(input_img)
+            #print('Actual: ' + str(dirname) + '     detected: ' + shape_class[np.argmax(prediction)])
+            print('detected: ' + shape_class[np.argmax(prediction)])
+            cv2.imshow('image', cv2.resize(image, (640,480)))
+            cv2.waitKey(3000)
 
-                #cv2.imshow('image', image)
-                #cv2.waitKey(0)
+            #cv2.imshow('image', image)
+            #cv2.waitKey(0)
 
 
     except KeyboardInterrupt:
