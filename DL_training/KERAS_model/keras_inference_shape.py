@@ -17,11 +17,11 @@ from datetime import datetime
 6:  Star
 '''
 
-PATH_TEST = "/home/driverless/ras_perception/DL_training/image_dataset_keras_shape/Test/" 
-VIDEO_INFERENCE = 1 
-IMG_INFERNECE = 0
+PATH_TEST = "../image_dataset_keras_shape/" 
+VIDEO_INFERENCE = 0
+IMG_INFERNECE = 1
 
-inference_model = keras.models.load_model('/home/driverless/ras_perception/DL_training/saved_models/keras_cifar10_trained_model.h5')
+inference_model = keras.models.load_model('saved_models/keras_RAS_model_shape_2.h5')
 
 if VIDEO_INFERENCE:    
     #cap = cv2.VideoCapture('/home/driverless/ras_perception/DL_training/ras_labeling')

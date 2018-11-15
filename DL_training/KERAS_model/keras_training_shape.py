@@ -10,6 +10,7 @@ import glob
 import cv2
 import numpy as np
 from sklearn.utils import shuffle
+from sklearn.model_selection import train_test_split
 
 '''
 @author:Ajinkya Khoche
@@ -40,19 +41,20 @@ num_predictions = 20
 save_dir = os.path.join(os.getcwd(), 'saved_models')
 model_name = 'keras_RAS_model_shape_2.h5'
 
-PATH_TRAIN = "/home/driverless/ras_perception/DL_training/image_dataset_keras_shape/Train/"
-PATH_TEST = "/home/driverless/ras_perception/DL_training/image_dataset_keras_shape/Test/" 
+PATH_DATA = "/home/driverless/ras_perception/DL_training/image_dataset_keras_shape/"
+# PATH_TRAIN = "/home/driverless/ras_perception/DL_training/image_dataset_keras_shape/Train/"
+# PATH_TEST = "/home/driverless/ras_perception/DL_training/image_dataset_keras_shape/Test/" 
 
 def load_custom_data():
-    x_train_list = []
-    y_train_list = []
+    x_list = []
+    y_list = []
 
-    x_test_list = []
-    y_test_list = []
+    # x_test_list = []
+    # y_test_list = []
 
-    ### LOAD TEST DATA  ###
-    print('##########    TEST DATA      ##########')
-    for dirname in os.listdir(PATH_TEST):
+    ### LOAD Training DATA  ###
+    print('##########    LOADING DATA     ##########')
+    for dirname in os.listdir(PATH_DATA):
         if dirname == 'Ball':
             label = 0
         elif dirname == 'Cube':
@@ -69,56 +71,28 @@ def load_custom_data():
             label = 6
 
         print('##########    ' + dirname + ' , Label : ' + str(label) + '      ##########')
-        for file in glob.glob(PATH_TEST + dirname + "/*.jpg"):
+        for file in glob.glob(PATH_DATA + dirname + "/*.jpg"):
 
             image = cv2.imread(file)
 
-            x_test_list.append(cv2.resize(image, (32,32)))
-            y_test_list.append(label)
+            x_list.append(cv2.resize(image, (32,32)))
+            y_list.append(label)
         
-    x_test = np.array(x_test_list)
-    y_test = np.reshape(np.array(y_test_list), (-1,1))
+    x_arr = np.array(x_list)
+    y_arr = np.reshape(np.array(y_list), (-1,1))
 
-    ### LOAD TRAINING DATA  ###
-    print('##########    TRAINING DATA      ##########')
-    for dirname in os.listdir(PATH_TRAIN):
-        if dirname == 'Ball':
-            label = 0
-        elif dirname == 'Cube':
-            label = 1
-        elif dirname == 'Cylinder':
-            label = 2
-        elif dirname == 'Hollow Cube':
-            label = 3
-        elif dirname == 'Cross':
-            label = 4
-        elif dirname == 'Triangle':
-            label = 5
-        elif dirname == 'Star':
-            label = 6
-
-        print('##########    ' + dirname + ' , Label : ' + str(label) + '      ##########')
-        for file in glob.glob(PATH_TRAIN + dirname + "/*.jpg"):
-
-            image = cv2.imread(file)
-
-            x_train_list.append(cv2.resize(image, (32,32)))
-            y_train_list.append(label)
-
-    x_train = np.array(x_train_list)
-    y_train = np.reshape(np.array(y_train_list), (-1,1))
-
+    x_train, x_test, y_train, y_test = train_test_split(x_arr, y_arr, test_size=0.3, random_state=0)
     return (x_train, y_train), (x_test, y_test) 
 
 
 # The data, split between train and test sets:
 #(x_train, y_train), (x_test, y_test) = cifar10.load_data()
-(x_tr, y_tr), (x_te, y_te) = load_custom_data()
+(x_train, y_train), (x_test, y_test) = load_custom_data()
 #load_custom_data()
 
 # Shuffle data to randomize
-(x_train, y_train) = shuffle(x_tr, y_tr, random_state=0)
-(x_test, y_test) = shuffle(x_te, y_te, random_state=0)
+# (x_train, y_train) = shuffle(x_tr, y_tr, random_state=0)
+# (x_test, y_test) = shuffle(x_te, y_te, random_state=0)
 
 print('x_train shape:', x_train.shape)
 print(x_train.shape[0], 'train samples')
@@ -144,6 +118,14 @@ model.add(Conv2D(64, (3, 3)))
 model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Dropout(0.25))
+
+# model.add(Conv2D(128, (3, 3), padding='same'))
+# model.add(Activation('relu'))
+# model.add(Conv2D(128, (3, 3)))
+# model.add(Activation('relu'))
+# model.add(MaxPooling2D(pool_size=(2, 2)))
+# model.add(Dropout(0.25))
+
 
 model.add(Flatten())
 model.add(Dense(512))
