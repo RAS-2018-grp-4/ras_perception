@@ -96,9 +96,9 @@ void maze_object::callback_inputDepth(const sensor_msgs::ImageConstPtr& msg)
     //imshow("Depth Image", cv_bridge::toCvShare(msg, "32FC1")->image);
     //waitKey(30);
 
-    //cout<<"Depth at 320,240 is: \t"<<depth_input.at<float>(240,320)<<"\n";
+    cout<<"Depth at 320,240 is: \t"<<depth_input.at<float>(240,320)<<"\n";
     //cout<< depth_input;
-    //cout<<"\n\n\n\n\n\n\n§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§\n\n\n\n\n\n\n";
+    cout<<"\n\n\n\n\n\n\n§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§\n\n\n\n\n\n\n";
     
 
 
