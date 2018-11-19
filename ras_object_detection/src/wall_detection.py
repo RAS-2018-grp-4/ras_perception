@@ -64,7 +64,7 @@ class Wall_Detection:
             else:
                 pass
             
-            if scan.ranges[i] != float("inf") and (i >= 160) and (i < 200) and self.MSG.data:
+            if scan.ranges[i] != float("inf"):# and (i >= 160) and (i < 200) and self.MSG.data:
 
                 #print(str(i) + ' ' + str(degree) + ' ' + str(scan.ranges[i]))
                 #self.WALL_POSITION.header.stamp = rospy.Time.now()
