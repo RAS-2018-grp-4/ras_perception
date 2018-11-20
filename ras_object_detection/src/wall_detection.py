@@ -27,10 +27,8 @@ class Wall_Detection:
 
         self.ROBOT_POSITION = nav_msgs.msg.Odometry()
         self.MSG = std_msgs.msg.Bool()
-        self.MSG.data = False
-        self.PUB_POS = False
-        self.WALL_DETECTION = False
-        self.TIMES = 0
+        self.MSG.data = False                          # detect wall or noy
+        self.REMAIN_MAPPING_TIMES = 0                  # mapping times
     #####################################################
     #             Initialize ROS Parameter              #
     #####################################################
@@ -56,19 +54,21 @@ class Wall_Detection:
             degree = ((x)*180./3.14)
             # print(str(i) + ' ' + str(degree) + ' ' + str(scan.ranges[i]))
         
-            if (i >= 170) and (i < 190) and not self.MSG.data:# -30 to 30
+            if (i >= 170) and (i < 190) and not self.MSG.data:# -10 to 10
                 if scan.ranges[i] < self.DISTANCE_THRESHOLD:
+                    
+                    # publish message
                     self.MSG.data = True
                     self.pub_WALL_DETECTION.publish(self.MSG)
-                    self.WALL_DETECTION = True
-                    self.PUB_POS = True
-                    self.TIMES = 5
+
+
+                    self.REMAIN_MAPPING_TIMES = 5
                 else:
                     pass
             else:
                 pass
             
-            if scan.ranges[i] != float("inf") and (i >= 150) and (i < 210) and self.TIMES > 0:
+            if scan.ranges[i] != float("inf") and (i >= 150) and (i < 210) and self.REMAIN_MAPPING_TIMES > 0 and scan.ranges[i] < 0.47:
 
                 #print(str(i) + ' ' + str(degree) + ' ' + str(scan.ranges[i]))
                 #self.WALL_POSITION.header.stamp = rospy.Time.now()
@@ -91,12 +91,9 @@ class Wall_Detection:
 
                 wall_position_array.poses.append(somePose)
 
-                #print(str(self.WALL_POSITION.point.x))
-
-                # THIS IS TEMPORARILY DISABLED#########################################################
-        if self.TIMES > 0:
+        if self.REMAIN_MAPPING_TIMES > 0:
             self.pub_WALL_POSITION.publish(wall_position_array)   
-            self.TIMES  = self.TIMES -1      
+            self.REMAIN_MAPPING_TIMES  = self.REMAIN_MAPPING_TIMES -1      
         
         
     #####################################################
@@ -111,15 +108,22 @@ class Wall_Detection:
             odom.pose.pose.orientation.z, 
             odom.pose.pose.orientation.w])
         self.THETA = y
-        #print(str(self.X)+ ' ' + str(self.Y) + ' ' + str(self.THETA))
+       
     #####################################################
     #                   Main_Loop                       #
     #####################################################
     def loop(self):
         while not rospy.is_shutdown():
             
-        
+            if self.MSG.data:
+                rospy.sleep(5)
 
+                #reset
+                self.REMAIN_MAPPING_TIMES = 0 
+                self.MSG.data = False
+
+            else:
+                pass   
             self.rate.sleep()
 
     
