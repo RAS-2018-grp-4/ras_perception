@@ -29,6 +29,8 @@ class Wall_Detection:
         self.MSG = std_msgs.msg.Bool()
         self.MSG.data = False
         self.PUB_POS = False
+        self.WALL_DETECTION = False
+        self.TIMES = 0
     #####################################################
     #             Initialize ROS Parameter              #
     #####################################################
@@ -50,29 +52,31 @@ class Wall_Detection:
         #self.MSG.data = False
         wall_position_array = geometry_msgs.msg.PoseArray()
         for i in range(0, count): 
-            x = scan.angle_min + scan.angle_increment * i
+            x = scan.angle_min + scan.angle_increment * i 
             degree = ((x)*180./3.14)
             # print(str(i) + ' ' + str(degree) + ' ' + str(scan.ranges[i]))
         
-            if (i >= 160) and (i < 200) and not self.MSG.data:# -20 to 20
+            if (i >= 170) and (i < 190) and not self.MSG.data:# -30 to 30
                 if scan.ranges[i] < self.DISTANCE_THRESHOLD:
                     self.MSG.data = True
                     self.pub_WALL_DETECTION.publish(self.MSG)
+                    self.WALL_DETECTION = True
                     self.PUB_POS = True
+                    self.TIMES = 5
                 else:
                     pass
             else:
                 pass
             
-            if scan.ranges[i] != float("inf"):# and (i >= 160) and (i < 200) and self.MSG.data:
+            if scan.ranges[i] != float("inf") and (i >= 150) and (i < 210) and self.TIMES > 0:
 
                 #print(str(i) + ' ' + str(degree) + ' ' + str(scan.ranges[i]))
                 #self.WALL_POSITION.header.stamp = rospy.Time.now()
-                self.WALL_POSITION.header.frame_id = 'laser'
+                self.WALL_POSITION.header.frame_id = 'odom'
                 self.WALL_POSITION.point.x = self.X + math.cos(self.THETA + x) * scan.ranges[i]
                 self.WALL_POSITION.point.y = self.Y + math.sin(self.THETA + x) * scan.ranges[i]
                 self.WALL_POSITION.point.z = 0
-                self.LISTENER.waitForTransform("/laser", "/map", rospy.Time(0),rospy.Duration(4.0))
+                self.LISTENER.waitForTransform("/odom", "/map", rospy.Time(0),rospy.Duration(4.0))
                 self.WALL_POSITION = self.LISTENER.transformPoint("/map",self.WALL_POSITION)
 
                 somePose = geometry_msgs.msg.Pose()
@@ -90,9 +94,9 @@ class Wall_Detection:
                 #print(str(self.WALL_POSITION.point.x))
 
                 # THIS IS TEMPORARILY DISABLED#########################################################
-        if self.PUB_POS:
+        if self.TIMES > 0:
             self.pub_WALL_POSITION.publish(wall_position_array)   
-            self.PUB_POS = False      
+            self.TIMES  = self.TIMES -1      
         
         
     #####################################################
@@ -114,7 +118,7 @@ class Wall_Detection:
     def loop(self):
         while not rospy.is_shutdown():
             
-
+        
 
             self.rate.sleep()
 
