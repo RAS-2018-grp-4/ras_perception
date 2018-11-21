@@ -5,6 +5,7 @@
 #include "geometry_msgs/Point.h"
 #include <visualization_msgs/MarkerArray.h>
 #include "object_saving/objects.h"
+#include "object_saving/objects_found.h"
 
 
 class map_object{
@@ -14,11 +15,12 @@ class map_object{
     //Members: shape, position, its value and if it has been already picked or not
     std::string shape;
     geometry_msgs::PointStamped map_position;
+    int color;
     int value;
     bool picked;
 
     map_object();
-    map_object(geometry_msgs::PointStamped);
+    map_object(geometry_msgs::PointStamped, int);
 
     //void publish_position_best_object();
 };
@@ -26,14 +28,36 @@ class map_object{
 //Default constructor
 map_object::map_object(void){
     shape = "unknown";
+    color = 0;
     value = 1;
     picked = false;
 }
 
-//Constructor overloaded with known position
-map_object::map_object(geometry_msgs::PointStamped position){
+//Constructor overloaded with known position and color
+map_object::map_object(geometry_msgs::PointStamped position, int this_color){
     shape = "unknown";
-    value = 1;
+    color = this_color;
+    switch(this_color){
+        case 0: //the object is green
+            value = 5;
+            break;
+        case 1: //the object is red
+            value = 20;
+            break;
+        case 2: //the object is yellow
+            value = 2;
+            break;
+        case 3: //the object is orange
+            value = 100;
+            break;
+        case 4: //the object is purple
+            value = 40;
+            break;
+        case 5: //the object is blue
+            value = 10;
+            break;
+  
+    }
     picked = false;
     map_position = position;
 }
@@ -42,41 +66,52 @@ map_object::map_object(geometry_msgs::PointStamped position){
 std::vector<map_object> objects;
 int number_objects;
 
-void position_callBack(const geometry_msgs::PointStamped position){
+void position_callBack(const object_saving::objects_found objects_found){
 
     if(objects.size()!= 0){
+        for(int q = 0; q < objects_found.number_of_objects;q++){
         //Compare if it's the same object, not taking into account the closest ones
-        if((!std::isnan(position.point.x)) && (!std::isnan(position.point.y)) && (!std::isnan(position.point.z))){
-            int temp_counter = 0;
-            for(int i= 0; i < objects.size(); i++){
-                if(sqrt(pow(position.point.x-objects[i].map_position.point.x,2)+ pow(position.point.y-objects[i].map_position.point.y,2))> 0.15){
-                    temp_counter += 1;
+            if((!std::isnan(objects_found.array_objects_found[q].point.x)) && (!std::isnan(objects_found.array_objects_found[q].point.z)) && (!std::isnan(objects_found.array_objects_found[q].point.z))){
+                int temp_counter = 0;
+                for(int i= 0; i < objects.size(); i++){
+                    if(sqrt(pow(objects_found.array_objects_found[q].point.x-objects[i].map_position.point.x,2)+ pow(objects_found.array_objects_found[q].point.x-objects[i].map_position.point.x,2))> 0.1){
+                        temp_counter += 1;
+                    }
                 }
-            }
-            if(temp_counter == objects.size()){
-                map_object temp_object(position);
-                objects.push_back(temp_object);
-                number_objects += 1;
+                if(temp_counter == objects.size()){
+                    map_object temp_object(objects_found.array_objects_found[q],objects_found.array_colors[q]);
+                    objects.push_back(temp_object);
+                    number_objects += 1;
+                }
             }
         }
     }
 
     else{
         //There are no objects yet, so the first object is created in the vector
-        if((!std::isnan(position.point.x)) && (!std::isnan(position.point.y)) && (!std::isnan(position.point.z))){
-            map_object temp_object(position);
-            objects.push_back(temp_object);
-            number_objects += 1;
+        for(int q = 0;q<objects_found.number_of_objects;q++){
+            if((!std::isnan(objects_found.array_objects_found[q].point.x)) && (!std::isnan(objects_found.array_objects_found[q].point.y)) && (!std::isnan(objects_found.array_objects_found[q].point.z))){
+                map_object temp_object(objects_found.array_objects_found[q],objects_found.array_colors[q]);
+                objects.push_back(temp_object);
+                number_objects += 1;
+            }
         }
     }
 }
 
 void smach_callBack(const bool flag_picked){
     if(flag_picked){
-        //-----------HERE CODE FOR CHANGING FLAG OF OBJECT PICKED-------------
-        //objects[i].picked = true;
+        //-----------HERE CODE FOR CHANGING FLAG OF OBJECT PICKED-------------(
+            int best_value = 0;
+            int best_index;
+        for(int i = 0; i < objects.size();i++){
+            if(objects[i].value > best_value){
+                best_value = objects[i].value;
+                best_index = i;
+            }
+        }
+        if(!std::isnan(best_index)) objects[best_index].picked = true;
     }
-
 }
 
 void identification_callBack(const std::string shape_of_object_detected){
@@ -166,11 +201,39 @@ int main(int argc, char **argv)
                 markers.markers[i].scale.z = 0.05;
 
                 // Set the color -- be sure to set alpha to something non-zero!
-                markers.markers[i].color.r = 0.0f;
-                markers.markers[i].color.g = 1.0f;
-                markers.markers[i].color.b = 0.0f;
                 markers.markers[i].color.a = 1.0;
-
+                switch(objects[i].color){
+                            case 0: //the object is green
+                                markers.markers[i].color.r = 0.0f;
+                                markers.markers[i].color.g = 1.0f;
+                                markers.markers[i].color.b = 0.0f;
+                                break;
+                            case 1: //the object is red
+                                markers.markers[i].color.r = 1.0f;
+                                markers.markers[i].color.g = 0.0f;
+                                markers.markers[i].color.b = 0.0f;
+                                break;
+                            case 2: //the object is yellow
+                                markers.markers[i].color.r = 1.0f;
+                                markers.markers[i].color.g = 1.0f;
+                                markers.markers[i].color.b = 0.0f;
+                                break;
+                            case 3: //the object is orange
+                                markers.markers[i].color.r = 1.0f;
+                                markers.markers[i].color.g = 0.7f;
+                                markers.markers[i].color.b = 0.0f;
+                                break;
+                            case 4: //the object is purple
+                                markers.markers[i].color.r = 0.5f;
+                                markers.markers[i].color.g = 0.0f;
+                                markers.markers[i].color.b = 0.5f;
+                                break;
+                            case 5: //the object is blue
+                                markers.markers[i].color.r = 0.0f;
+                                markers.markers[i].color.g = 0.0f;
+                                markers.markers[i].color.b = 1.0f;
+                                break;
+                }             
                 markers.markers[i].lifetime = ros::Duration(0.25);
                 
             }
