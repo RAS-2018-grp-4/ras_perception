@@ -7,6 +7,7 @@
 #include "object_saving/objects.h"
 #include "object_saving/objects_found.h"
 
+using namespace std;
 
 class map_object{
 
@@ -68,30 +69,104 @@ int number_objects;
 
 void position_callBack(const object_saving::objects_found objects_found){
 
+    vector<vector<int> > index_conc;
+    object_saving::objects_found objects_found_temp = objects_found;
+
+    //Robustness against same object detected in two bounding boxes
+    for(int j = 0; j < objects_found.number_of_objects;j++){
+        vector<int> temp_coincidence;
+        temp_coincidence.push_back(j);
+        for(int k = 0; k < objects_found.number_of_objects;k++){
+            if(k != j){
+                if(sqrt(pow(objects_found.array_objects_found[j].point.x-objects_found.array_objects_found[k].point.x,2)+ pow(objects_found.array_objects_found[j].point.y-objects_found.array_objects_found[k].point.y,2)) < 0.05){
+                    if(objects_found.array_colors[j] == objects_found.array_colors[k]){
+                        //There is an object detected twice or more
+                        temp_coincidence.push_back(k);
+                    }
+                }
+            }
+        }
+        if(temp_coincidence.size() > 1){
+            index_conc.push_back(temp_coincidence);
+            //cout<<"Detected a duplicate"<<endl;
+        }
+    }
+
+    int finish_for = index_conc.size();
+    if(finish_for != 0){
+        for(int j = 0; j < finish_for; j++){
+            for(int k = 0; k < finish_for; k++){
+                int equal = 0;
+                if((j != k) && (index_conc[j].size() == index_conc[k].size())){
+                    for(int q = 0; q < index_conc[k].size(); q++){
+                        if(index_conc[j][0] == index_conc[k][q]){
+                            //j = k; k is eliminated from the vector
+                            equal = 1;
+                        }
+                    }
+                }
+                if(equal != 0){
+                    finish_for -= 1;
+                    index_conc.erase(index_conc.begin()+1);
+                }
+            }
+        }
+
+        for(int j = 0; j < finish_for; j++){
+            float avg_x = 0.0;
+            float avg_y = 0.0;
+            for(int k = 0; k < index_conc[j].size();k++){
+                avg_x += objects_found_temp.array_objects_found[index_conc[j][k]].point.x;
+                avg_y += objects_found_temp.array_objects_found[index_conc[j][k]].point.y;
+            }
+            avg_x /= index_conc[j].size();
+            avg_y /= index_conc[j].size();
+            objects_found_temp.array_objects_found[index_conc[j][0]].point.x = avg_x;
+            objects_found_temp.array_objects_found[index_conc[j][0]].point.y = avg_y;
+            //Now we eliminate the same objects
+            for(int k = 1; k < index_conc[j].size();k++){
+                objects_found_temp.array_objects_found.erase(objects_found_temp.array_objects_found.begin()+index_conc[j][k]-1);
+                objects_found_temp.array_colors.erase(objects_found_temp.array_colors.begin()+index_conc[j][k]-1);
+                objects_found_temp.number_of_objects -= 1;
+                //Now we gotta change the vector of indexes of duplicate objects
+                for(int q = 0;q<index_conc.size();q++){
+                    for(int w = 0; w<index_conc[q].size();w++){
+                        if(index_conc[q][w] >= index_conc[j][k]) index_conc[q][w] -= 1;
+                    }
+                }
+            }
+        }
+    }
+    //else cout<<"No duplicates detected"<<endl;
+
+    //Once having eliminated duplicated detected objects,
+    //they are marked in the map if they are not close to another existing object in the map 
     if(objects.size()!= 0){
-        for(int q = 0; q < objects_found.number_of_objects;q++){
+        for(int q = 0; q < objects_found_temp.number_of_objects;q++){
         //Compare if it's the same object, not taking into account the closest ones
-            if((!std::isnan(objects_found.array_objects_found[q].point.x)) && (!std::isnan(objects_found.array_objects_found[q].point.z)) && (!std::isnan(objects_found.array_objects_found[q].point.z))){
+            if((!std::isnan(objects_found_temp.array_objects_found[q].point.x)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.y)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.z))){
                 int temp_counter = 0;
                 for(int i= 0; i < objects.size(); i++){
-                    if(sqrt(pow(objects_found.array_objects_found[q].point.x-objects[i].map_position.point.x,2)+ pow(objects_found.array_objects_found[q].point.x-objects[i].map_position.point.x,2))> 0.1){
+                    if(sqrt(pow(objects_found_temp.array_objects_found[q].point.x-objects[i].map_position.point.x,2)+ pow(objects_found_temp.array_objects_found[q].point.y-objects[i].map_position.point.y,2))> 0.1){
                         temp_counter += 1;
                     }
                 }
                 if(temp_counter == objects.size()){
-                    map_object temp_object(objects_found.array_objects_found[q],objects_found.array_colors[q]);
+                    map_object temp_object(objects_found_temp.array_objects_found[q],objects_found_temp.array_colors[q]);
                     objects.push_back(temp_object);
                     number_objects += 1;
+                    cout<<"Found a new object"<<endl;
                 }
+                else cout<<"Detected but too close to an object"<<endl;
             }
         }
     }
 
     else{
         //There are no objects yet, so the first object is created in the vector
-        for(int q = 0;q<objects_found.number_of_objects;q++){
-            if((!std::isnan(objects_found.array_objects_found[q].point.x)) && (!std::isnan(objects_found.array_objects_found[q].point.y)) && (!std::isnan(objects_found.array_objects_found[q].point.z))){
-                map_object temp_object(objects_found.array_objects_found[q],objects_found.array_colors[q]);
+        for(int q = 0;q<objects_found_temp.number_of_objects;q++){
+            if((!std::isnan(objects_found_temp.array_objects_found[q].point.x)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.y)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.z))){
+                map_object temp_object(objects_found_temp.array_objects_found[q],objects_found_temp.array_colors[q]);
                 objects.push_back(temp_object);
                 number_objects += 1;
             }
