@@ -165,8 +165,8 @@ def draw_result(box, image, bbox_col, pred_shape_label= None, pred_color_label=N
 
 
 if VIDEO_INFERENCE:    
-    cap = cv2.VideoCapture('../ras_labeling/vid1.mp4')
-    #cap = cv2.VideoCapture(0)
+    #cap = cv2.VideoCapture('../ras_labeling/vid1.mp4')
+    cap = cv2.VideoCapture(0)
 
     while cap.isOpened():
         a = datetime.now()
