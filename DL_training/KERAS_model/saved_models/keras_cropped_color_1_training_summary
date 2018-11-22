@@ -1,0 +1,66 @@
+##########    LOADING DATA     ##########
+##########    Red , Label : 3      ##########
+##########    Nothing , Label : 6      ##########
+##########    Purple , Label : 5      ##########
+##########    Orange , Label : 2      ##########
+##########    Yellow , Label : 0      ##########
+##########    Green , Label : 1      ##########
+##########    Blue , Label : 4      ##########
+x_train shape: (1206, 32, 32, 3)
+1206 train samples
+517 test samples
+Using real-time data augmentation.
+Epoch 1/25
+38/38 [==============================] - 8s 208ms/step - loss: 0.8218 - acc: 0.7132 - val_loss: 0.3479 - val_acc: 0.8762
+Epoch 2/25
+38/38 [==============================] - 6s 159ms/step - loss: 0.3725 - acc: 0.8721 - val_loss: 0.2275 - val_acc: 0.9014
+Epoch 3/25
+38/38 [==============================] - 6s 159ms/step - loss: 0.2528 - acc: 0.8987 - val_loss: 0.1999 - val_acc: 0.9246
+Epoch 4/25
+38/38 [==============================] - 6s 167ms/step - loss: 0.2246 - acc: 0.9129 - val_loss: 0.1534 - val_acc: 0.9381
+Epoch 5/25
+38/38 [==============================] - 7s 175ms/step - loss: 0.1744 - acc: 0.9352 - val_loss: 0.1389 - val_acc: 0.9458
+Epoch 6/25
+38/38 [==============================] - 7s 172ms/step - loss: 0.1424 - acc: 0.9511 - val_loss: 0.1387 - val_acc: 0.9478
+Epoch 7/25
+38/38 [==============================] - 7s 175ms/step - loss: 0.1346 - acc: 0.9581 - val_loss: 0.1292 - val_acc: 0.9516
+Epoch 8/25
+38/38 [==============================] - 7s 177ms/step - loss: 0.1253 - acc: 0.9503 - val_loss: 0.0898 - val_acc: 0.9613
+Epoch 9/25
+38/38 [==============================] - 6s 161ms/step - loss: 0.1071 - acc: 0.9643 - val_loss: 0.0997 - val_acc: 0.9652
+Epoch 10/25
+38/38 [==============================] - 6s 169ms/step - loss: 0.0841 - acc: 0.9687 - val_loss: 0.0943 - val_acc: 0.9710
+Epoch 11/25
+38/38 [==============================] - 6s 169ms/step - loss: 0.0775 - acc: 0.9737 - val_loss: 0.0926 - val_acc: 0.9652
+Epoch 12/25
+38/38 [==============================] - 7s 176ms/step - loss: 0.0900 - acc: 0.9672 - val_loss: 0.1144 - val_acc: 0.9613
+Epoch 13/25
+38/38 [==============================] - 7s 174ms/step - loss: 0.0705 - acc: 0.9729 - val_loss: 0.0665 - val_acc: 0.9749
+Epoch 14/25
+38/38 [==============================] - 7s 175ms/step - loss: 0.0771 - acc: 0.9753 - val_loss: 0.0834 - val_acc: 0.9691
+Epoch 15/25
+38/38 [==============================] - 7s 173ms/step - loss: 0.0730 - acc: 0.9737 - val_loss: 0.0604 - val_acc: 0.9768
+Epoch 16/25
+38/38 [==============================] - 6s 168ms/step - loss: 0.0665 - acc: 0.9770 - val_loss: 0.0585 - val_acc: 0.9749
+Epoch 17/25
+38/38 [==============================] - 6s 168ms/step - loss: 0.0593 - acc: 0.9799 - val_loss: 0.0760 - val_acc: 0.9768
+Epoch 18/25
+38/38 [==============================] - 7s 174ms/step - loss: 0.0556 - acc: 0.9804 - val_loss: 0.0615 - val_acc: 0.9768
+Epoch 19/25
+38/38 [==============================] - 7s 173ms/step - loss: 0.0853 - acc: 0.9693 - val_loss: 0.0828 - val_acc: 0.9729
+Epoch 20/25
+38/38 [==============================] - 6s 163ms/step - loss: 0.0610 - acc: 0.9819 - val_loss: 0.0505 - val_acc: 0.9826
+Epoch 21/25
+38/38 [==============================] - 7s 173ms/step - loss: 0.0597 - acc: 0.9721 - val_loss: 0.0451 - val_acc: 0.9826
+Epoch 22/25
+38/38 [==============================] - 6s 168ms/step - loss: 0.0482 - acc: 0.9786 - val_loss: 0.0558 - val_acc: 0.9768
+Epoch 23/25
+38/38 [==============================] - 7s 188ms/step - loss: 0.0433 - acc: 0.9827 - val_loss: 0.0417 - val_acc: 0.9865
+Epoch 24/25
+38/38 [==============================] - 7s 174ms/step - loss: 0.0527 - acc: 0.9791 - val_loss: 0.0591 - val_acc: 0.9787
+Epoch 25/25
+38/38 [==============================] - 7s 178ms/step - loss: 0.0495 - acc: 0.9811 - val_loss: 0.0365 - val_acc: 0.9865
+Saved trained model at /home/ajinkya/ras_ws/src/ras_perception/DL_training/KERAS_model/saved_models/keras_cropped_color_1.h5
+517/517 [==============================] - 1s 1ms/step
+Test loss: 0.03649267668074475
+Test accuracy: 0.9864603481624759
