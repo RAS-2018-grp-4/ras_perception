@@ -1,7 +1,0 @@
-Ball
-Cube
-Cylinder
-Hollow Cube
-Cross
-Triangle
-Star
