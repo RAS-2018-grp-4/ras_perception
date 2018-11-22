@@ -18,6 +18,7 @@ class map_object{
     geometry_msgs::PointStamped map_position;
     int color;
     int value;
+    int probability;
     bool picked;
 
     map_object();
@@ -30,6 +31,7 @@ class map_object{
 map_object::map_object(void){
     shape = "unknown";
     color = 0;
+    probability = 50;
     value = 1;
     picked = false;
 }
@@ -60,6 +62,7 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color){
   
     }
     picked = false;
+    probability = 50;
     map_position = position;
 }
 
@@ -141,7 +144,10 @@ void position_callBack(const object_saving::objects_found objects_found){
 
     //Once having eliminated duplicated detected objects,
     //they are marked in the map if they are not close to another existing object in the map 
+    //If there is detecting the same object, the probability of it gets higher by 10 (until 1000)
     if(objects.size()!= 0){
+        int previous_size = objects.size();
+        vector<int> objects_same(previous_size,0);
         for(int q = 0; q < objects_found_temp.number_of_objects;q++){
         //Compare if it's the same object, not taking into account the closest ones
             if((!std::isnan(objects_found_temp.array_objects_found[q].point.x)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.y)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.z))){
@@ -150,6 +156,10 @@ void position_callBack(const object_saving::objects_found objects_found){
                     if(sqrt(pow(objects_found_temp.array_objects_found[q].point.x-objects[i].map_position.point.x,2)+ pow(objects_found_temp.array_objects_found[q].point.y-objects[i].map_position.point.y,2))> 0.1){
                         temp_counter += 1;
                     }
+                    else if(objects_found_temp.array_colors[q] == objects[i].color){
+                        objects_same[i] = 1;
+                        objects_same.push_back(i);
+                    }
                 }
                 if(temp_counter == objects.size()){
                     map_object temp_object(objects_found_temp.array_objects_found[q],objects_found_temp.array_colors[q]);
@@ -157,8 +167,20 @@ void position_callBack(const object_saving::objects_found objects_found){
                     number_objects += 1;
                     cout<<"Found a new object"<<endl;
                 }
-                else cout<<"Detected but too close to an object"<<endl;
+                else{
+                    cout<<"Detected but too close to an object"<<endl;
+                    //objects[same_index].probability += 10; //We have found the same object, so probability gets higher
+                } 
             }
+        }
+        for(int q = 0; q < previous_size; q++){
+            if(objects_same[q] == 1){
+                if(objects[q].probability < 991) objects[q].probability += 10; //We have found the same object, so probability gets higher
+                else objects[q].probability = 1000;
+            } 
+            else if(objects_same[q] == 0){
+                if(objects[q].probability > 50) objects[q].probability -= 1; //we have not found this object, so prob. gets reduced
+            } 
         }
     }
 
