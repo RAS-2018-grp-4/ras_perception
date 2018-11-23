@@ -277,12 +277,13 @@ int main(int argc, char **argv)
             visualization_msgs::MarkerArray markers;
             markers.markers.resize(objects.size());
             visualization_msgs::MarkerArray markers_current;
-            std::vector<map_object> objects_current;
+            vector<map_object> objects_current;
             for(int i = 0; i < objects.size();i++){
                 if(objects[i].probability > 50){
                     objects_current.push_back(objects[i]);
                 }
             }
+            markers.markers.resize(objects_current.size());
             for(int i = 0; i < objects_current.size(); i++){
                 markers_current.markers[i].header.frame_id = "/map";
                 markers_current.markers[i].header.stamp = ros::Time::now();
