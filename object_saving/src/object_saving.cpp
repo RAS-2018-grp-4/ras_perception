@@ -314,7 +314,7 @@ int main(int argc, char **argv)
 
                 // Set the color -- be sure to set alpha to something non-zero!
                 markers_current.markers[i].color.a = 1.0;
-                switch(objects[i].color){
+                switch(objects_current[i].color){
                             case 0: //the object is yellow
                                 markers_current.markers[i].color.r = 1.0f;
                                 markers_current.markers[i].color.g = 1.0f;
