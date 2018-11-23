@@ -67,6 +67,7 @@ class object_detected{
   public:
   geometry_msgs::PointStamped position;
   int color; //0: green, 1: red, 2: yellow, 3: orange, 4: purple, 5:blue
+  int shape;
   object_detected(geometry_msgs::PointStamped,int);
 };
 
@@ -74,6 +75,7 @@ class object_detected{
 object_detected::object_detected(geometry_msgs::PointStamped obj_position, int obj_color){
   position = obj_position;
   color = obj_color;
+  shape = 8;
 }
 
 class maze_object
@@ -128,7 +130,7 @@ void maze_object::findBoundingBoxes() //This function returns bounding boxes of 
     for ( int ind = 0; ind < contours.size(); ind++)
     {
       ctr_area = contourArea(contours[ind]);
-      if(ctr_area > 2000.0)
+      if(ctr_area > 1000.0)
       {
         bBoxes.push_back(boundingRect(Mat(contours[ind])));
         this->number_same_color+=1;
@@ -177,11 +179,11 @@ void maze_object::obtainDepth(){
         temp_position.point.x = ((float)x_pos[i] - cx) / fx * z_world_temp[i];//(y_pos - cy) / fy * z_world;
         temp_position.point.y = -((float)y_pos[i] - cy) / fy * z_world_temp[i];//(x_pos - cx) / fx * z_world;
         temp_position.point.y = - temp_position.point.y;    // based on observation
-        cout<<temp_position<<endl;
+        //cout<<temp_position<<endl;
         vector_position.push_back(temp_position);
       }
       else{
-        cout<<"All depths are nan. Therefore the object detected is useless"<<endl;
+        //cout<<"All depths are nan. Therefore the object detected is useless"<<endl;
         defectuous_index.push_back(i);
       }
     }
@@ -201,9 +203,38 @@ void maze_object::obtainDepth(){
 **********************/
 void maze_object::display_bBox(Mat detected_image, int index)
 {
-  for(int i=0;i<this->number_same_color;i++){
-    rectangle( detected_image, this->bBoxes[i].tl(), this->bBoxes[i].br(), Scalar(0,255,0), 2, 8, 0 );
-  }
+  switch(index){
+    case 0:
+      for(int i=0;i<this->number_same_color;i++){
+        rectangle( detected_image, this->bBoxes[i].tl(), this->bBoxes[i].br(), Scalar(0,255,0), 2, 8, 0 );
+      }
+      break;  
+    case 1:
+      for(int i=0;i<this->number_same_color;i++){
+        rectangle( detected_image, this->bBoxes[i].tl(), this->bBoxes[i].br(), Scalar(0,0,255), 2, 8, 0 );
+      }
+      break; 
+    case 2:
+      for(int i=0;i<this->number_same_color;i++){
+        rectangle( detected_image, this->bBoxes[i].tl(), this->bBoxes[i].br(), Scalar(0,255,255), 2, 8, 0 );
+      }
+      break; 
+    case 3:
+      for(int i=0;i<this->number_same_color;i++){
+        rectangle( detected_image, this->bBoxes[i].tl(), this->bBoxes[i].br(), Scalar(0,69,255), 2, 8, 0 );
+      }
+      break; 
+    case 4:
+      for(int i=0;i<this->number_same_color;i++){
+        rectangle( detected_image, this->bBoxes[i].tl(), this->bBoxes[i].br(), Scalar(200,0,200), 2, 8, 0 );
+      }
+      break; 
+    case 5:
+      for(int i=0;i<this->number_same_color;i++){
+        rectangle( detected_image, this->bBoxes[i].tl(), this->bBoxes[i].br(), Scalar(255,0,0), 2, 8, 0 );
+      }
+      break;
+  } 
 }
 
 
@@ -212,7 +243,7 @@ void maze_object::display_bBox(Mat detected_image, int index)
 **********************/
 int main(int argc, char **argv)
 {
-  int loop_frequency = 20;
+  int loop_frequency = 5;
 
   std_msgs::String sm_msg; // create an object of std::msg::String type for state mc message
   std::stringstream ss;
@@ -234,7 +265,7 @@ int main(int argc, char **argv)
   image_transport::Subscriber rgb_sub = it.subscribe("/camera/rgb/image_rect_color", 1, &callback_inputRGB);
  
   //ros::Publisher obj_pose_pub = n.advertise<geometry_msgs::PointStamped>("/object_position_cam_link", 100);
-  ros::Publisher obj_pose_pub = n.advertise<object_detection_test::objects_found>("/object_position_cam_link", 1);
+  ros::Publisher obj_pose_pub = n.advertise<object_detection_test::objects_found>("/object_position_cam_link_classical", 1);
   // Publisher for rviz marker
   //ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("/object_marker", 1);
   
@@ -256,10 +287,10 @@ int main(int argc, char **argv)
     //   std::cout<<"Cannot read a frame from webcam"<<std::endl;
 		//   break;
     // }
-    if(!rgb_input.empty()){
+    if((!rgb_input.empty())&&(!depth_input.empty())){
       Mat img_clone = rgb_input.clone();
       Mat detected_image = rgb_input.clone();
-      Mat img_hsv, thresh_hsv, morph_opening;
+      Mat img_hsv, thresh_hsv, thresh_green, morph_opening, morph_opening_green;
     
       cvtColor(img_clone, img_hsv, COLOR_BGR2HSV);
 
@@ -267,7 +298,7 @@ int main(int argc, char **argv)
       //Apply Opening (erosion + dilation to each image)
       int morph_operator = 2;		//OPENING
       int morph_elem = 2;			//ELLIPSE
-      int morph_size = 3	;		//SIZE of Strel
+      int morph_size = 1	;		//SIZE of Strel
       Mat element = getStructuringElement( morph_elem, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
       
       int number_objects_detected = 0;
@@ -279,10 +310,14 @@ int main(int argc, char **argv)
 
       //Green : 0
       //First, threshold the image with HSV channel
-      inRange(img_hsv, Scalar(40,160,90), Scalar(50,255,200), thresh_hsv);
+      inRange(img_hsv, Scalar(38,150,90), Scalar(53,255,200), thresh_hsv);
       //Then, we apply opening to the thresholded image
       morphologyEx( thresh_hsv, morph_opening, morph_operator, element );
       green_objects.color_threshold = morph_opening;
+      inRange(img_hsv, Scalar(58,140,65), Scalar(76,255,160), thresh_green);
+      //Then, we apply opening to the thresholded image
+      morphologyEx( thresh_green, morph_opening_green, morph_operator, element );
+      bitwise_or(morph_opening,morph_opening_green,morph_opening);
       //We find the bounding boxes using the "opened" image
       green_objects.findBoundingBoxes();
       number_objects_detected += green_objects.number_same_color;
@@ -303,7 +338,7 @@ int main(int argc, char **argv)
       }
 
       //Red : 1
-      inRange(img_hsv, Scalar(1,210,90), Scalar(6,255,160), thresh_hsv);
+      inRange(img_hsv, Scalar(0,170,120), Scalar(5,255,225), thresh_hsv);
       morphologyEx( thresh_hsv, morph_opening, morph_operator, element );
       red_objects.color_threshold = morph_opening;
       red_objects.findBoundingBoxes();
@@ -323,7 +358,7 @@ int main(int argc, char **argv)
       }
 
       //Yellow : 2
-      inRange(img_hsv, Scalar(15,210,110), Scalar(22,255,190), thresh_hsv);
+      inRange(img_hsv, Scalar(18,200,105), Scalar(23,255,240), thresh_hsv);
       morphologyEx( thresh_hsv, morph_opening, morph_operator, element );
       yellow_objects.color_threshold = morph_opening;
       yellow_objects.findBoundingBoxes();
@@ -341,7 +376,7 @@ int main(int argc, char **argv)
       }
 
       //Orange : 3
-      inRange(img_hsv, Scalar(7,220,110), Scalar(13,255,205), thresh_hsv);
+      inRange(img_hsv, Scalar(6,230,130), Scalar(13,255,255), thresh_hsv);
       morphologyEx( thresh_hsv, morph_opening, morph_operator, element );
       orange_objects.color_threshold = morph_opening;
       orange_objects.findBoundingBoxes();
@@ -359,7 +394,7 @@ int main(int argc, char **argv)
       }
 
       //Purple : 4
-      inRange(img_hsv, Scalar(142,45,80), Scalar(179,132,150), thresh_hsv);
+      inRange(img_hsv, Scalar(130,35,75), Scalar(175,135,175), thresh_hsv);
       morphologyEx( thresh_hsv, morph_opening, morph_operator, element );
       purple_objects.color_threshold = morph_opening;
       purple_objects.findBoundingBoxes();
@@ -377,7 +412,7 @@ int main(int argc, char **argv)
       }
 
       //Blue : 5
-      inRange(img_hsv, Scalar(90,70,45), Scalar(101,255,150), thresh_hsv);
+      inRange(img_hsv, Scalar(87,140,60), Scalar(103,255,195), thresh_hsv);
       morphologyEx( thresh_hsv, morph_opening, morph_operator, element );
       blue_objects.color_threshold = morph_opening;
       blue_objects.findBoundingBoxes();
@@ -413,11 +448,13 @@ int main(int argc, char **argv)
         for(int index_object = 0; index_object<temp_objects.number_of_objects;index_object++){
           temp_objects.array_objects_found.push_back(vector_objects_detected[index_object].position);
           temp_objects.array_colors.push_back(vector_objects_detected[index_object].color);
+          temp_objects.array_shape.push_back(vector_objects_detected[index_object].shape);
         }
         obj_pose_pub.publish(temp_objects);
       }
 
       imshow("Detected objects", detected_image);
+      //imshow("HSV", img_hsv);
     }
     else{
       cout<<"NO INPUT IMAGE RECEIVED!"<<endl;

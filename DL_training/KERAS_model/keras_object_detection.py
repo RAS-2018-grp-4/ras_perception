@@ -3,6 +3,7 @@ import numpy as np
 import keras.models 
 import glob
 from datetime import datetime
+from keras.models import model_from_json
 
 '''
 @author:Ajinkya Khoche
@@ -30,20 +31,22 @@ Class Labels:   COLOR
 3:  Red
 4:  Blue
 5:  Purple
+6:  Nothing
 '''
+
 model_shape = keras.models.load_model('./saved_models/keras_RAS_model_shape_1.h5')
-model_color = keras.models.load_model('./saved_models/keras_RAS_model_color_2.h5')
+model_color = keras.models.load_model('./saved_models/keras_cropped_color_1.h5')
 
-shape_class = ['Ball', 'Cube', 'Cylinder', 'Hollow Cube', 'Cross', 'Triangle', 'Star' ]
-color_class = ['Yellow', 'Green', 'Orange', 'Red', 'Blue', 'Purple']
+shape_class = ['Ball', 'Cube', 'Cylinder', 'Hollow Cube', 'Cross', 'Triangle', 'Star', 'Nothing' ]
+color_class = ['Yellow', 'Green', 'Orange', 'Red', 'Blue', 'Purple', 'Nothing']
 
-VIDEO_INFERENCE = 1
-IMG_INFERNECE = 0
+VIDEO_INFERENCE = 0
+IMG_INFERNECE = 1
 
 N_SHAPES = 7
 N_COLORS = 6
 
-DEBUG = 1
+DEBUG = 0
 
 def morphOpen(image):
     # define structuring element
@@ -67,7 +70,7 @@ def detect_object(image, color_label):
         # mask = mask1 + mask2 
         mask = cv2.inRange(hsv, np.array([0,175,188]), np.array([23,255,255]))
     elif color_label == 3:  #RED
-        # mask1 = cv2.inRange(hsv, np.array([0,50,50]), np.array([15,255,255]))
+        # mask1 = cv2.inRange(hsv, np.array([0,150,0]), np.array([4,255,200]))
         # mask2 = cv2.inRange(hsv, np.array([170,50,50]), np.array([180,255,255]))
         # mask = mask1 + mask2 
         mask = cv2.inRange(hsv, np.array([0,150,0]), np.array([4,255,200]))
@@ -76,9 +79,9 @@ def detect_object(image, color_label):
     elif color_label == 5:  #PURPLE
         mask = cv2.inRange(hsv, np.array([116,100,8]), np.array([179,166,173]))
 
-    if DEBUG:
-        cv2.imshow('mask', mask)
-        cv2.waitKey(0)
+    # if DEBUG:
+    #     cv2.imshow('mask', mask)
+    #     cv2.waitKey(0)
 
     # blur image
     #mask_blur = cv2.GaussianBlur(mask,(2,2),0)
@@ -90,33 +93,42 @@ def detect_object(image, color_label):
 
     # find contours
     _, contours, _ = cv2.findContours(mask_morph, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    
-    for k in range(contours.__len__()):
-        xx, yy, w, h = cv2.boundingRect(contours[k])
+    largest_contours = sorted(contours, key=cv2.contourArea)[-10:]
+    for k in range(largest_contours.__len__()):
+        xx, yy, w, h = cv2.boundingRect(largest_contours[k])
         #print(box[2]*box[3])
 
-        if w/h > 0.5 and w/h<2:
-            if w*h > 2000:
+        if float(h)/w > 0.8 and float(h)/w<1.2:
+            if w*h > 5000:
                 # we need to give slightly bigger image to detector to get a clear detection
-                tl_x = max(0, int(xx - 0.25*w))
-                tl_y = max(0, int(yy - 0.25*h))
-                br_x = min(image.shape[1], int(xx + w + 0.25*w))
-                br_y = min(image.shape[0], int(yy + h + 0.25*h))
+                roi_x = max(0, int(xx - 0.25*w))
+                roi_y = max(0, int(yy - 0.25*h))
+                # br_x = min(image.shape[1], int(xx + w + 0.25*w))
+                # br_y = min(image.shape[0], int(yy + h + 0.25*h))
+                roi_w = int(w*1.5)
+                roi_h = int(h*1.5)
 
                 #bBox_img = image[yy:yy+h, xx:xx+w]
-                bBox_img = image[tl_y:tl_y+(br_y-tl_y), tl_x:tl_x+(br_x-tl_x)]
+                #bBox_img = image[tl_y:tl_y+(br_y-tl_y), tl_x:tl_x+(br_x-tl_x)]
+                bBox_img = image[roi_y:roi_y+roi_h, roi_x:roi_x+roi_w]
                 input_img = []
                 input_img.append(cv2.resize(bBox_img, (32,32)))
                 input_img = np.array(input_img)
 
-                pred_shape = model_shape.predict(input_img)
                 pred_color = model_color.predict(input_img)
 
-                #draw_result([xx,yy,w,h], image, pred_shape, pred_color)
-                draw_result([xx,yy,w,h], image)
-                draw_result([tl_x,tl_y,tl_x+(br_x-tl_x),tl_y+(br_y-tl_y)], image)
+                pred_color_label = np.argmax(pred_color)
                 
-                print(color_class[np.argmax(pred_color)]+ ' ' +shape_class[np.argmax(pred_shape)])
+                if pred_color_label != 6:   #NOTHING class
+                    if(pred_color_label == color_label):
+                        pred_shape = model_shape.predict(input_img)
+
+                        #draw_result([xx,yy,w,h], image, pred_shape, pred_color)
+                        draw_result([xx,yy,w,h], image)
+                        #draw_result([tl_x,tl_y,tl_x+(br_x-tl_x),tl_y+(br_y-tl_y)], image)
+                        draw_result([roi_x,roi_y, roi_w, roi_h], image)
+
+                        print(color_class[np.argmax(pred_color)]+ ' ' +shape_class[np.argmax(pred_shape)])
     
 #def draw_result(box, image, pred_shape, pred_color):
 def draw_result(box, image):

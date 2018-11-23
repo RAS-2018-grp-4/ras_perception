@@ -31,13 +31,13 @@ from sklearn.model_selection import train_test_split
 
 batch_size = 32
 num_classes = 7
-epochs = 100
+epochs = 25
 data_augmentation = True
 num_predictions = 20
 save_dir = os.path.join(os.getcwd(), 'saved_models')
-model_name = 'keras_RAS_model_color_3.h5'
+model_name = 'keras_cropped_color_1.h5'
 
-PATH_DATA = "../image_dataset_keras_color/"
+PATH_DATA = "../image_dataset-master-cropped_color/"
 
 color_class = ['Yellow', 'Green', 'Orange', 'Red', 'Blue', 'Purple', 'Nothing']
 
@@ -78,7 +78,7 @@ def load_custom_data():
     x_arr = np.array(x_list)
     y_arr = np.reshape(np.array(y_list), (-1,1))
 
-    x_train, x_test, y_train, y_test = train_test_split(x_arr, y_arr, test_size=0.4, random_state=0)
+    x_train, x_test, y_train, y_test = train_test_split(x_arr, y_arr, test_size=0.3, random_state=0)
     return (x_train, y_train), (x_test, y_test) 
 
 
@@ -133,8 +133,13 @@ model.compile(loss='categorical_crossentropy',
 
 x_train = x_train.astype('float32')
 x_test = x_test.astype('float32')
-x_train /= 255
-x_test /= 255
+# x_train /= 255
+# x_test /= 255
+#z-score
+mean = np.mean(x_train,axis=(0,1,2,3))
+std = np.std(x_train,axis=(0,1,2,3))
+x_train = (x_train-mean)/(std+1e-7)
+x_test = (x_test-mean)/(std+1e-7)
 
 if not data_augmentation:
     print('Not using data augmentation.')
@@ -198,7 +203,7 @@ scores = model.evaluate(x_test, y_test, verbose=1)
 print('Test loss:', scores[0])
 print('Test accuracy:', scores[1])
 
-for file in glob.glob('../RAS_DATASET'+ "/*.jpg"):
+for file in glob.glob('../CROPPED_DATASET'+ "/*.jpg"):
     image = cv2.imread(file)
 
     input_img = []
