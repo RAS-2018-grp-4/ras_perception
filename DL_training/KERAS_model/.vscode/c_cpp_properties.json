@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "",
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "includePath": [
+                "/home/ras14/catkin_ws/devel/include",
+                "/opt/ros/kinetic/include",
+                "/home/ras14/catkin_ws/src/ras_path_planning/path_planner/include",
+                "/home/ras14/catkin_ws/src/ras_lab1/ras_lab1_distance_sensor/include",
+                "/home/ras14/catkin_ws/src/ras_lab1/ras_lab1_motors/include",
+                "/home/ras14/catkin_ws/src/ras_slam/ras_maze/ras_maze_distance_sensor/include",
+                "/home/ras14/catkin_ws/src/ras_perception/ras_object_detection/include",
+                "/home/ras14/catkin_ws/src/ras_tf/ras_object_listener/include",
+                "/home/ras14/catkin_ws/src/ras_miscellaneous-/ras_realsense/realsense_camera/include",
+                "/home/ras14/catkin_ws/src/ras_state_machine/state_machine/include",
+                "/usr/include"
+            ],
+            "name": "Linux",
+            "intelliSenseMode": "gcc-x64"
+        }
+    ],
+    "version": 4
+}

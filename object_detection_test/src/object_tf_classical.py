@@ -22,10 +22,10 @@ class Object_tf:
     #####################################################
     #             Initialize ROS Parameter              #
     #####################################################
-        rospy.init_node('object_tf_node', anonymous=True)
-        self.pub_OBJ_POS = rospy.Publisher('/object_position_map', objects_found, queue_size=1)
+        rospy.init_node('object_tf_node_classical', anonymous=True)
+        self.pub_OBJ_POS = rospy.Publisher('/object_position_map_classical', objects_found, queue_size=1)
         self.rate = rospy.Rate(10)
-        rospy.Subscriber('/object_position_cam_link', objects_found, self.feedback_obj_pos)
+        rospy.Subscriber('/object_position_cam_link_classical', objects_found, self.feedback_obj_pos)
         self.LISTENER = tf.TransformListener()
         
 
