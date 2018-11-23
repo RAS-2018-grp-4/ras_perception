@@ -275,6 +275,8 @@ int main(int argc, char **argv)
         if((objects.size() != 0) && (number_objects != 0)){
             visualization_msgs::MarkerArray markers;
             markers.markers.resize(objects.size());
+            
+
             object_saving::objects temp_objects;
             temp_objects.number_of_objects = number_objects;
             int best_value = 0;
