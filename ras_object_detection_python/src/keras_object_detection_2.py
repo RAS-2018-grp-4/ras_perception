@@ -29,7 +29,8 @@ Class Labels:   SHAPE
 4:  Cross
 5:  Triangle
 6:  Star
-7:  Nothing
+7: Obstacle
+8:  Nothing
 ########################################
 
 model_color: A CNN which detects color
@@ -110,6 +111,7 @@ def get_depth(bBox):
     # z = z0 * beta
 
     z = np.mean(depth_square[valid_index[0], valid_index[1]]) 
+    z = -z
     #print(z)
         
     # use intrinsic camera parameters to convert from pixel coordinate to 
@@ -335,7 +337,7 @@ def main():
     # Subscriber to depth image
     rospy.Subscriber("/camera/depth_registered/sw_registered/image_rect", Image, callback_depth)
     
-    r = rospy.Rate(10) # Hz
+    r = rospy.Rate(5) # Hz
     while not rospy.is_shutdown():
         # Parameters for local map
         object_x = []
@@ -377,6 +379,8 @@ def main():
 
             for j in range(local_map.shape[0]):
                 point_temp = PointStamped()
+                point_temp.header.frame_id = '/camera_link'
+                #point_temp.header.stamp = rospy.Time.now()
                 point_temp.point.x = local_map[j,0]
                 point_temp.point.y = local_map[j,1]
                 point_temp.point.z = local_map[j,2]

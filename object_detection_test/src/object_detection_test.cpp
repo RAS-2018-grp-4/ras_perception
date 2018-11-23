@@ -67,6 +67,7 @@ class object_detected{
   public:
   geometry_msgs::PointStamped position;
   int color; //0: green, 1: red, 2: yellow, 3: orange, 4: purple, 5:blue
+  int shape;
   object_detected(geometry_msgs::PointStamped,int);
 };
 
@@ -74,6 +75,7 @@ class object_detected{
 object_detected::object_detected(geometry_msgs::PointStamped obj_position, int obj_color){
   position = obj_position;
   color = obj_color;
+  shape = 8;
 }
 
 class maze_object
@@ -241,7 +243,7 @@ void maze_object::display_bBox(Mat detected_image, int index)
 **********************/
 int main(int argc, char **argv)
 {
-  int loop_frequency = 20;
+  int loop_frequency = 5;
 
   std_msgs::String sm_msg; // create an object of std::msg::String type for state mc message
   std::stringstream ss;
@@ -263,7 +265,7 @@ int main(int argc, char **argv)
   image_transport::Subscriber rgb_sub = it.subscribe("/camera/rgb/image_rect_color", 1, &callback_inputRGB);
  
   //ros::Publisher obj_pose_pub = n.advertise<geometry_msgs::PointStamped>("/object_position_cam_link", 100);
-  ros::Publisher obj_pose_pub = n.advertise<object_detection_test::objects_found>("/object_position_cam_link", 1);
+  ros::Publisher obj_pose_pub = n.advertise<object_detection_test::objects_found>("/object_position_cam_link_classical", 1);
   // Publisher for rviz marker
   //ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("/object_marker", 1);
   
@@ -446,12 +448,13 @@ int main(int argc, char **argv)
         for(int index_object = 0; index_object<temp_objects.number_of_objects;index_object++){
           temp_objects.array_objects_found.push_back(vector_objects_detected[index_object].position);
           temp_objects.array_colors.push_back(vector_objects_detected[index_object].color);
+          temp_objects.array_shape.push_back(vector_objects_detected[index_object].shape);
         }
         obj_pose_pub.publish(temp_objects);
       }
 
       imshow("Detected objects", detected_image);
-      imshow("HSV", img_hsv);
+      //imshow("HSV", img_hsv);
     }
     else{
       cout<<"NO INPUT IMAGE RECEIVED!"<<endl;

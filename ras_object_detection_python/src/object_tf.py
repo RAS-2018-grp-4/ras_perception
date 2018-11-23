@@ -24,7 +24,7 @@ class Object_tf:
     #####################################################
         rospy.init_node('object_tf_node', anonymous=True)
         self.pub_OBJ_POS = rospy.Publisher('/object_position_map', objects_found, queue_size=1)
-        self.rate = rospy.Rate(10)
+        self.rate = rospy.Rate(5)
         rospy.Subscriber('/object_position_cam_link', objects_found, self.feedback_obj_pos)
         self.LISTENER = tf.TransformListener()
         
