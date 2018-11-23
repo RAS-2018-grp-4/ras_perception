@@ -299,9 +299,9 @@ int main(int argc, char **argv)
                 markers_current.markers[i].action = visualization_msgs::Marker::ADD;
 
                 // Set the pose of the markers[i].  This is a full 6DOF pose relative to the frame/time specified in the header
-                markers_current.markers[i].pose.position.x = objects[i].map_position.point.x;
-                markers_current.markers[i].pose.position.y = objects[i].map_position.point.y;
-                markers_current.markers[i].pose.position.z = objects[i].map_position.point.z;
+                markers_current.markers[i].pose.position.x = objects_current[i].map_position.point.x;
+                markers_current.markers[i].pose.position.y = objects_current[i].map_position.point.y;
+                markers_current.markers[i].pose.position.z = objects_current[i].map_position.point.z;
                 markers_current.markers[i].pose.orientation.x = 0.0;
                 markers_current.markers[i].pose.orientation.y = 0.0;
                 markers_current.markers[i].pose.orientation.z = 0.0;
