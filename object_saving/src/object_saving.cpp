@@ -277,79 +277,6 @@ int main(int argc, char **argv)
             visualization_msgs::MarkerArray markers;
             markers.markers.resize(objects.size());
             visualization_msgs::MarkerArray markers_current;
-            vector<map_object> objects_current;
-            for(int i = 0; i < objects.size();i++){
-                if(objects[i].probability > 50){
-                    objects_current.push_back(objects[i]);
-                }
-            }
-            markers.markers.resize(objects_current.size());
-            for(int i = 0; i < objects_current.size(); i++){
-                markers_current.markers[i].header.frame_id = "/map";
-                markers_current.markers[i].header.stamp = ros::Time::now();
-
-                // Set the namespace and id for this markers[i].  This serves to create a unique ID
-                // Any markers[i] sent with the same namespace and id will overwrite the old one
-                markers_current.markers[i].ns = "detected current objects";
-                markers_current.markers[i].id = i+1000;
-
-                // Set the markers[i] type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-                markers_current.markers[i].type = visualization_msgs::Marker::CUBE;
-
-                // Set the markers[i] action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
-                markers_current.markers[i].action = visualization_msgs::Marker::ADD;
-
-                // Set the pose of the markers[i].  This is a full 6DOF pose relative to the frame/time specified in the header
-                markers_current.markers[i].pose.position.x = objects_current[i].map_position.point.x;
-                markers_current.markers[i].pose.position.y = objects_current[i].map_position.point.y;
-                markers_current.markers[i].pose.position.z = objects_current[i].map_position.point.z;
-                markers_current.markers[i].pose.orientation.x = 0.0;
-                markers_current.markers[i].pose.orientation.y = 0.0;
-                markers_current.markers[i].pose.orientation.z = 0.0;
-                markers_current.markers[i].pose.orientation.w = 1.0;
-
-                // Set the scale of the marker -- 1x1x1 here means 1m on a side
-                markers_current.markers[i].scale.x = 0.07;
-                markers_current.markers[i].scale.y = 0.07;
-                markers_current.markers[i].scale.z = 0.07;
-
-                // Set the color -- be sure to set alpha to something non-zero!
-                markers_current.markers[i].color.a = 1.0;
-                switch(objects_current[i].color){
-                            case 0: //the object is yellow
-                                markers_current.markers[i].color.r = 1.0f;
-                                markers_current.markers[i].color.g = 1.0f;
-                                markers_current.markers[i].color.b = 0.0f;
-                                break;
-                            case 1: //the object is green
-                                markers_current.markers[i].color.r = 0.0f;
-                                markers_current.markers[i].color.g = 1.0f;
-                                markers_current.markers[i].color.b = 0.0f;
-                                break;
-                            case 2: //the object is orange
-                                markers_current.markers[i].color.r = 1.0f;
-                                markers_current.markers[i].color.g = 0.7f;
-                                markers_current.markers[i].color.b = 0.0f;
-                                break;
-                            case 3: //the object is red
-                                markers_current.markers[i].color.r = 1.0f;
-                                markers_current.markers[i].color.g = 0.0f;
-                                markers_current.markers[i].color.b = 0.0f;
-                                break;
-                            case 4: //the object is blue
-                                markers_current.markers[i].color.r = 0.0f;
-                                markers_current.markers[i].color.g = 0.0f;
-                                markers_current.markers[i].color.b = 1.0f;
-                                break;
-                            case 5: //the object is purple
-                                markers_current.markers[i].color.r = 0.5f;
-                                markers_current.markers[i].color.g = 0.0f;
-                                markers_current.markers[i].color.b = 0.5f;
-                                break;
-                }             
-                markers_current.markers[i].lifetime = ros::Duration(0.25);
-            }
-
             object_saving::objects temp_objects;
             temp_objects.number_of_objects = number_objects;
             int best_value = 0;
@@ -427,12 +354,86 @@ int main(int argc, char **argv)
                 markers.markers[i].lifetime = ros::Duration(0.25);
                 
             }
+
+            vector<map_object> objects_current;
+            for(int i = 0; i < objects.size();i++){
+                if(objects[i].probability > 50){
+                    objects_current.push_back(objects[i]);
+                }
+            }
+            //cout<<"I'm here"<< endl;
+            markers_current.markers.resize(objects_current.size());
+            for(int i = 0; i < objects_current.size(); i++){
+                markers_current.markers[i].header.frame_id = "/map";
+                markers_current.markers[i].header.stamp = ros::Time::now();
+
+                // Set the namespace and id for this markers[i].  This serves to create a unique ID
+                // Any markers[i] sent with the same namespace and id will overwrite the old one
+                markers_current.markers[i].ns = "detected current objects";
+                markers_current.markers[i].id = i + objects.size();
+
+                // Set the markers[i] type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+                markers_current.markers[i].type = visualization_msgs::Marker::CUBE;
+
+                // Set the markers[i] action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+                markers_current.markers[i].action = visualization_msgs::Marker::ADD;
+
+                // Set the pose of the markers[i].  This is a full 6DOF pose relative to the frame/time specified in the header
+                markers_current.markers[i].pose.position.x = objects_current[i].map_position.point.x;
+                markers_current.markers[i].pose.position.y = objects_current[i].map_position.point.y;
+                markers_current.markers[i].pose.position.z = objects_current[i].map_position.point.z;
+                markers_current.markers[i].pose.orientation.x = 0.0;
+                markers_current.markers[i].pose.orientation.y = 0.0;
+                markers_current.markers[i].pose.orientation.z = 0.0;
+                markers_current.markers[i].pose.orientation.w = 1.0;
+
+                // Set the scale of the marker -- 1x1x1 here means 1m on a side
+                markers_current.markers[i].scale.x = 0.07;
+                markers_current.markers[i].scale.y = 0.07;
+                markers_current.markers[i].scale.z = 0.07;
+
+                // Set the color -- be sure to set alpha to something non-zero!
+                markers_current.markers[i].color.a = 1.0;
+                switch(objects_current[i].color){
+                            case 0: //the object is yellow
+                                markers_current.markers[i].color.r = 1.0f;
+                                markers_current.markers[i].color.g = 1.0f;
+                                markers_current.markers[i].color.b = 0.0f;
+                                break;
+                            case 1: //the object is green
+                                markers_current.markers[i].color.r = 0.0f;
+                                markers_current.markers[i].color.g = 1.0f;
+                                markers_current.markers[i].color.b = 0.0f;
+                                break;
+                            case 2: //the object is orange
+                                markers_current.markers[i].color.r = 1.0f;
+                                markers_current.markers[i].color.g = 0.7f;
+                                markers_current.markers[i].color.b = 0.0f;
+                                break;
+                            case 3: //the object is red
+                                markers_current.markers[i].color.r = 1.0f;
+                                markers_current.markers[i].color.g = 0.0f;
+                                markers_current.markers[i].color.b = 0.0f;
+                                break;
+                            case 4: //the object is blue
+                                markers_current.markers[i].color.r = 0.0f;
+                                markers_current.markers[i].color.g = 0.0f;
+                                markers_current.markers[i].color.b = 1.0f;
+                                break;
+                            case 5: //the object is purple
+                                markers_current.markers[i].color.r = 0.5f;
+                                markers_current.markers[i].color.g = 0.0f;
+                                markers_current.markers[i].color.b = 0.5f;
+                                break;
+                }             
+                markers_current.markers[i].lifetime = ros::Duration(0.25);
+            }
+            cout<<"I'm here"<<endl<<endl;
             //------HERE CODE TO PUBLISH ARRAY OF OBJECTS INTO RVIZ-------
             marker_pub.publish(markers);
             current_marker_pub.publish(markers_current);
             objects_pub.publish(temp_objects);
             best_object_pub.publish(objects[best_index].map_position);
-
         } 
 
         ros::spinOnce();
