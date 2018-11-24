@@ -141,23 +141,23 @@ def detect_object(image, color_label):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
     if color_label == 0:    #YELLOW
-        mask = cv2.inRange(hsv, np.array([17,128,90]), np.array([32,255,255]))
+        mask = cv2.inRange(hsv, np.array([24,152,145]), np.array([61,255,255]))
     elif color_label == 1:  #GREEN
-        mask = cv2.inRange(hsv, np.array([58,140,65]), np.array([76,255,160]))
+        mask = cv2.inRange(hsv, np.array([42,170,81]), np.array([83,255,255]))
     elif color_label == 2:  #ORANGE
         # mask1 = cv2.inRange(hsv, np.array([5,150,150]), np.array([15,255,255]))
         # mask2 = cv2.inRange(hsv, np.array([160,220,150]), np.array([169,255,255]))
         # mask = mask1 + mask2 
-        mask = cv2.inRange(hsv, np.array([6,230,130]), np.array([13,255,255]))
+        mask = cv2.inRange(hsv, np.array([11,215,115]), np.array([24,255,115]))
     elif color_label == 3:  #RED
-        mask1 = cv2.inRange(hsv, np.array([0,130,120]), np.array([8,255,255]))
-        mask2 = cv2.inRange(hsv, np.array([170,130,200]), np.array([179,255,255]))
-        mask = mask1 + mask2 
-        #mask = cv2.inRange(hsv, np.array([0,150,0]), np.array([4,255,200]))
+        # mask1 = cv2.inRange(hsv, np.array([0,130,120]), np.array([8,255,255]))
+        # mask2 = cv2.inRange(hsv, np.array([170,130,200]), np.array([179,255,255]))
+        # mask = mask1 + mask2 
+        mask = cv2.inRange(hsv, np.array([0,157,95]), np.array([179,255,200]))
     elif color_label == 4:  #BLUE
-        mask = cv2.inRange(hsv, np.array([56,85,0]), np.array([179,255,255]))
+        mask = cv2.inRange(hsv, np.array([56,140,75]), np.array([179,255,255]))
     elif color_label == 5:  #PURPLE
-        mask = cv2.inRange(hsv, np.array([28,0,50]), np.array([179,166,170]))
+        mask = cv2.inRange(hsv, np.array([93,0,0]), np.array([179,230,255]))
 
     # if DEBUG:
     #     cv2.imshow('mask', mask)
