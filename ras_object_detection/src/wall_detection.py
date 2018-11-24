@@ -9,7 +9,6 @@ import geometry_msgs.msg
 import math
 import tf
 
-from std_msgs.msg import Float32MultiArray
 
 #####################################################
 #                 Wall Detection Class              #
@@ -19,108 +18,107 @@ class Wall_Detection:
     #              Initialize Object                    #
     #####################################################
     def __init__(self):
-        self.DISTANCE_THRESHOLD = 0.4
-        self.X = 0.0
-        self.Y = 0.0
-        self.THETA = 0.0
-        self.WALL_POSITION = geometry_msgs.msg.PointStamped()
+        self.distance_threshold = 0.3
+        self.wall_position = geometry_msgs.msg.PointStamped()
+        self.msg = std_msgs.msg.Bool()
+        self.msg.data = False                          # detect wall or noy
+        self.remaining_mapping_times = 5                  # mapping times
+        self.remaining_skipping_times = 20
+        self.detect_angle = 20
+        self.map_angle = 90
+        self.max_mapping_distance = 2 * self.distance_threshold
 
-        self.ROBOT_POSITION = nav_msgs.msg.Odometry()
-        self.MSG = std_msgs.msg.Bool()
-        self.MSG.data = False                          # detect wall or noy
-        self.REMAIN_MAPPING_TIMES = 0                  # mapping times
     #####################################################
     #             Initialize ROS Parameter              #
     #####################################################
         rospy.init_node('wall_detection_node', anonymous=True)
-        self.pub_WALL_DETECTION = rospy.Publisher('/wall_detection', std_msgs.msg.Bool, queue_size=1)
-        self.pub_WALL_POSITION = rospy.Publisher('/wall_position', geometry_msgs.msg.PoseArray, queue_size=1)
+
+        self.pub_wall_detection = rospy.Publisher('/wall_detection', std_msgs.msg.Bool, queue_size=1)
+        self.pub_wall_position = rospy.Publisher('/wall_position', geometry_msgs.msg.PoseArray, queue_size=1)
+
+        rospy.Subscriber('/scan', sensor_msgs.msg.LaserScan, self.callback_laser)
+
         self.rate = rospy.Rate(10)
-        rospy.Subscriber('/scan', sensor_msgs.msg.LaserScan, self.feedback_laser)
-        rospy.Subscriber('/robot_filter', nav_msgs.msg.Odometry, self.feedback_odom)
-
-        self.LISTENER = tf.TransformListener()
+        self.listenser = tf.TransformListener()
         
 
     #####################################################
-    #                   Laser_Feedback                  #
+    #                   Laser_Callback                  #
     #####################################################
-    def feedback_laser(self,scan):
+    def callback_laser(self,scan):
         count = (int)(scan.scan_time / scan.time_increment)
-        #self.MSG.data = False
         wall_position_array = geometry_msgs.msg.PoseArray()
-        for i in range(0, count): 
-            x = scan.angle_min + scan.angle_increment * i 
-            degree = ((x)*180./3.14)
-            # print(str(i) + ' ' + str(degree) + ' ' + str(scan.ranges[i]))
-        
-            if (i >= 170) and (i < 190) and not self.MSG.data:# -10 to 10
-                if scan.ranges[i] < self.DISTANCE_THRESHOLD:
-                    
-                    # publish message
-                    self.MSG.data = True
-                    self.pub_WALL_DETECTION.publish(self.MSG)
 
+        # check if a wall in front of robot
+        if not self.msg.data:
+            for i in range(180 - self.detect_angle/2, 180 + self.detect_angle/2):
+                if scan.ranges[i] < self.distance_threshold:
+                        rospy.loginfo('Detect Wall')
 
-                    self.REMAIN_MAPPING_TIMES = 5
+                        # publish message
+                        self.msg.data = True
+                        self.pub_wall_detection.publish(self.msg)
+                        rospy.loginfo('Send Stop Message')
+
+                        break
                 else:
                     pass
+        
+        if self.remaining_mapping_times > 0 and self.remaining_skipping_times <= 0:
+            if self.remaining_mapping_times == 5:
+                rospy.loginfo('Mapping Start')
             else:
                 pass
             
-            if scan.ranges[i] != float("inf") and (i >= 150) and (i < 210) and self.REMAIN_MAPPING_TIMES > 0 and scan.ranges[i] < 0.47:
 
-                #print(str(i) + ' ' + str(degree) + ' ' + str(scan.ranges[i]))
-                #self.WALL_POSITION.header.stamp = rospy.Time.now()
-                self.WALL_POSITION.header.frame_id = 'odom'
-                self.WALL_POSITION.point.x = self.X + math.cos(self.THETA + x) * scan.ranges[i]
-                self.WALL_POSITION.point.y = self.Y + math.sin(self.THETA + x) * scan.ranges[i]
-                self.WALL_POSITION.point.z = 0
-                self.LISTENER.waitForTransform("/odom", "/map", rospy.Time(0),rospy.Duration(4.0))
-                self.WALL_POSITION = self.LISTENER.transformPoint("/map",self.WALL_POSITION)
+            for i in range(180 - self.map_angle /2, 180 + self.map_angle/2):
+                if scan.ranges[i] !=float("inf") and scan.ranges[i] < self.max_mapping_distance:
+                    x = scan.angle_min + scan.angle_increment * i 
+                    degree = ((x)*180./3.14)
+                    self.wall_position.header.frame_id = 'laser'
+                    self.wall_position.point.x = math.cos(x) * scan.ranges[i]
+                    self.wall_position.point.y = math.sin(x) * scan.ranges[i]
+                    self.wall_position.point.z = 0
+                    self.listenser.waitForTransform("/laser", "/map", rospy.Time(0),rospy.Duration(4.0))
+                    self.wall_position = self.listenser.transformPoint("/map",self.wall_position)
 
-                somePose = geometry_msgs.msg.Pose()
-                somePose.position.x = self.WALL_POSITION.point.x
-                somePose.position.y = self.WALL_POSITION.point.y
-                somePose.position.z = 0
+                    somepose = geometry_msgs.msg.Pose()
+                    somepose.position.x = self.wall_position.point.x 
+                    somepose.position.y = self.wall_position.point.y 
+                    somepose.position.z = 0
+                    somepose.orientation.x = 0.0
+                    somepose.orientation.y = 0.0
+                    somepose.orientation.z = 0.0
+                    somepose.orientation.w = 1.0
+                    wall_position_array.poses.append(somepose)
+                else:
+                    pass
 
-                somePose.orientation.x = 0.0
-                somePose.orientation.y = 0.0
-                somePose.orientation.z = 0.0
-                somePose.orientation.w = 1.0
+            self.pub_wall_position.publish(wall_position_array)
+            self.remaining_mapping_times = self.remaining_mapping_times - 1 
 
-                wall_position_array.poses.append(somePose)
-
-        if self.REMAIN_MAPPING_TIMES > 0:
-            self.pub_WALL_POSITION.publish(wall_position_array)   
-            self.REMAIN_MAPPING_TIMES  = self.REMAIN_MAPPING_TIMES -1      
-        
-        
-    #####################################################
-    #                   Odom_Feedback                   #
-    #####################################################
-    def feedback_odom(self,odom):
-        self.X = odom.pose.pose.position.x
-        self.Y = odom.pose.pose.position.y
-        (r, p, y) = tf.transformations.euler_from_quaternion([
-            odom.pose.pose.orientation.x, 
-            odom.pose.pose.orientation.y, 
-            odom.pose.pose.orientation.z, 
-            odom.pose.pose.orientation.w])
-        self.THETA = y
-       
+            if self.remaining_mapping_times == 0:
+                rospy.loginfo('Mapping Done')
+            else:
+                pass
+        if self.msg.data:
+            self.remaining_skipping_times = self.remaining_skipping_times - 1
     #####################################################
     #                   Main_Loop                       #
     #####################################################
     def loop(self):
+        rospy.loginfo('Wall Detection Start')
+
         while not rospy.is_shutdown():
             
-            if self.MSG.data:
-                rospy.sleep(5)
+            if self.msg.data:
+                rospy.sleep(8)
 
                 #reset
-                self.REMAIN_MAPPING_TIMES = 0 
-                self.MSG.data = False
+                self.remaining_mapping_times = 5                  
+                self.remaining_skipping_times = 20
+                self.msg.data = False
+                rospy.loginfo('Reset')
 
             else:
                 pass   

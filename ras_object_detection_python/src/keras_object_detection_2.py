@@ -45,13 +45,16 @@ Class Labels:   COLOR
 5:  Purple
 6:  Nothing
 '''
-json_file = open('../../DL_training/KERAS_model/saved_models/cropped_shape_1.json', 'r')
+#json_file = open('../../DL_training/KERAS_model/saved_models/cropped_shape_1.json', 'r')
+json_file = open('/home/ras14/catkin_ws/src/ras_perception/DL_training/KERAS_model/saved_models/cropped_shape_1.json', 'r')
 loaded_model_json = json_file.read()
 json_file.close()
 model_shape = model_from_json(loaded_model_json)
-model_shape.load_weights('../../DL_training/KERAS_model/saved_models/cropped_shape_1.h5')
+# model_shape.load_weights('../../DL_training/KERAS_model/saved_models/cropped_shape_1.h5')
+model_shape.load_weights('/home/ras14/catkin_ws/src/ras_perception/DL_training/KERAS_model/saved_models/cropped_shape_1.h5')
 #model_shape = keras.models.load_model('./saved_models/keras_RAS_model_shape_1.h5')
-model_color = keras.models.load_model('../../DL_training/KERAS_model//saved_models/keras_cropped_color_1.h5')
+# model_color = keras.models.load_model('../../DL_training/KERAS_model//saved_models/keras_cropped_color_1.h5')
+model_color = keras.models.load_model('/home/ras14/catkin_ws/src/ras_perception/DL_training/KERAS_model/saved_models/keras_cropped_color_1.h5')
 
 shape_class = ['Ball', 'Cube', 'Cylinder', 'Hollow Cube', 'Cross', 'Triangle', 'Star', 'Nothing' ]
 color_class = ['Yellow', 'Green', 'Orange', 'Red', 'Blue', 'Purple', 'Nothing']
@@ -235,7 +238,7 @@ def draw_result(box, image, bbox_col, pred_shape_label= None, pred_color_label=N
     else:
         '''Both shape and color on bounding box'''
         cv2.putText(image, color_class[pred_color_label]+ ' ' +shape_class[pred_shape_label], (box[0]-15,box[1]-20), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
-        cv2.putText(image,  str(round(z,3))+" m", (box[0]+15,box[1]+15), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(image,  str(round(-z,3))+" m", (box[0]+15,box[1]+15), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
     '''only color on bounding box'''
 #     cv2.putText(image, color_class[np.argmax(pred_color)], (box[0],box[1]-15), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0), 2,
 # cv2.LINE_AA)
@@ -370,8 +373,8 @@ def main():
             c = b - a
             fps = 1.0/(c.total_seconds())
 
-            cv2.imshow('result', frame)
-            cv2.waitKey(20)
+            # cv2.imshow('result', frame)
+            # cv2.waitKey(20)
             obj_array = objects_found()
             obj_array.number_of_objects = local_map.shape[0]
             obj_array.array_colors = local_map[:,4].tolist()
