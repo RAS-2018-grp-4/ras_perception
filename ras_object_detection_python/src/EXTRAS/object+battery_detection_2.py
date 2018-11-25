@@ -5,6 +5,7 @@ import keras.models
 import glob
 from datetime import datetime
 from keras.models import model_from_json
+from image_processing_helper import *
 
 # imports for ROS integration
 import rospy
@@ -29,8 +30,8 @@ Class Labels:   SHAPE
 4:  Cross
 5:  Triangle
 6:  Star
-7: Obstacle
-8:  Nothing
+7:  Nothing
+8:  Obstacle
 ########################################
 
 model_color: A CNN which detects color
@@ -77,15 +78,6 @@ cy = 352.49
 fy = 672.55
 cx = 635.18
 fx = 672.55
-
-def morphOpen(image):
-    # define structuring element
-    # take 5% of least dimension of image as kernel size
-    kernel_size = min(5, int(min(image.shape[0],image.shape[1])*0.05))
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(kernel_size,kernel_size))
-    #kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(5,5))
-    opening = cv2.morphologyEx(image, cv2.MORPH_OPEN, kernel)
-    return opening
 
 
 def get_depth(bBox):
@@ -137,34 +129,9 @@ def detect_object(image, color_label):
     pred_shape_label = None
     pred_color_label = None
 
-    # get hsv image
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    # Threshold HSV range for chosen color label
+    mask = threshold_hsv(image, color_label)
 
-    if color_label == 0:    #YELLOW
-        mask = cv2.inRange(hsv, np.array([24,152,145]), np.array([61,255,255]))
-    elif color_label == 1:  #GREEN
-        mask = cv2.inRange(hsv, np.array([42,170,81]), np.array([83,255,255]))
-    elif color_label == 2:  #ORANGE
-        # mask1 = cv2.inRange(hsv, np.array([5,150,150]), np.array([15,255,255]))
-        # mask2 = cv2.inRange(hsv, np.array([160,220,150]), np.array([169,255,255]))
-        # mask = mask1 + mask2 
-        mask = cv2.inRange(hsv, np.array([11,215,115]), np.array([24,255,115]))
-    elif color_label == 3:  #RED
-        # mask1 = cv2.inRange(hsv, np.array([0,130,120]), np.array([8,255,255]))
-        # mask2 = cv2.inRange(hsv, np.array([170,130,200]), np.array([179,255,255]))
-        # mask = mask1 + mask2 
-        mask = cv2.inRange(hsv, np.array([0,157,95]), np.array([179,255,200]))
-    elif color_label == 4:  #BLUE
-        mask = cv2.inRange(hsv, np.array([56,140,75]), np.array([179,255,255]))
-    elif color_label == 5:  #PURPLE
-        mask = cv2.inRange(hsv, np.array([93,0,0]), np.array([179,230,255]))
-
-    # if DEBUG:
-    #     cv2.imshow('mask', mask)
-    #     cv2.waitKey(0)
-
-    # blur image
-    #mask_blur = cv2.GaussianBlur(mask,(2,2),0)
     mask_morph = morphOpen(mask)
 
     if DEBUG: 
@@ -228,6 +195,52 @@ def detect_object(image, color_label):
                                 pass
                                 #print('wierd error!')
     return x_w, y_w, z_w, pred_shape_label, pred_color_label
+
+def detect_battery():
+    global lastFrame
+    depth_img = lastFrame.depth
+    rgb_img = lastFrame.image
+
+    sobely = cv2.Sobel(depth_img,cv2.CV_64F,0,1,ksize=5)
+
+    sobely_nonan = sobely.copy()
+    bad_I = np.argwhere(np.isnan(sobely))
+    sobely_nonan[bad_I[:,0],bad_I[:,1]] = 0
+
+    sobely_thresh = np.where(sobely_nonan>0, 255, 0)
+    sobely_thresh=np.uint8(sobely_thresh)
+    # cv2.imshow('thresh',np.uint8(sobely_thresh))
+    # cv2.waitKey(20)
+    #plt.imshow(sobely) 
+    
+
+    #Morph open 
+    sobely_thresh=morphOpen(sobely_thresh)
+    # find contours
+    _, contours, _ = cv2.findContours(sobely_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+    if contours != []:
+        contour_sizes = [(cv2.contourArea(contour)>5000) for contour in contours]
+        ind_temp = np.argwhere(contour_sizes)
+        for j in range(ind_temp.shape[0]):
+            largest_contours = contours[ind_temp[j,0]]
+        
+            #for k in range(largest_contours.__len__()):
+            box = cv2.boundingRect(largest_contours)
+            #if detect_color(rgb_img[yy:yy+h,xx:xx+w]==False):
+            if  cv2.contourArea(largest_contours) < 6000:
+                if float(box[2])/box[3] >1.5 or float(box[2])/box[3] < 0.7:     # flat or upright battery?
+                    cv2.rectangle(rgb_img, (box[0], box[1]), (box[0]+box[2], box[1]+box[3]), (0,0,255), 2)
+            else:
+                cv2.rectangle(rgb_img, (box[0], box[1]), (box[0]+box[2], box[1]+box[3]), (0,0,255), 2)
+            print(cv2.contourArea(largest_contours))
+        cv2.imshow('detected battery or wall',rgb_img)
+        cv2.waitKey(2)
+
+        cv2.imshow('sobel',sobely_thresh)
+        cv2.waitKey(2)
+        # print('got here')  
+
     
 #def draw_result(box, image, pred_shape, pred_color):
 def draw_result(box, image, bbox_col, pred_shape_label= None, pred_color_label=None, z=None):
@@ -266,6 +279,7 @@ def callback_storage_image(image_message):
     #lastFrame.image = cv2.cvtColor(lastFrame.image, cv2.COLOR_BGR2RGB)
     lastFrame.flagImage = True
 
+
 #call back function to store depth in class object
 def callback_depth(image_message):
     #print('trace 3')
@@ -275,46 +289,6 @@ def callback_depth(image_message):
     #print(lastFrame.depth)
     lastFrame.flagDepth = True
 
-def detect_battery():
-    global lastFrame
-    depth_img = lastFrame.depth
-    rgb_img = lastFrame.image
-
-    sobely = cv2.Sobel(depth_img,cv2.CV_64F,0,1,ksize=5)
-
-    sobely_nonan = sobely.copy()
-    bad_I = np.argwhere(np.isnan(sobely))
-    sobely_nonan[bad_I[:,0],bad_I[:,1]] = 0
-
-    sobely_thresh = np.where(sobely_nonan>0, 255, 0)
-    sobely_thresh=np.uint8(sobely_thresh)
-    # cv2.imshow('thresh',np.uint8(sobely_thresh))
-    # cv2.waitKey(20)
-    #plt.imshow(sobely) 
-    
-
-    #Morph open 
-    sobely_thresh=self.morphOpen(sobely_thresh)
-    # find contours
-    _, contours, _ = cv2.findContours(sobely_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    
-    if contours != []:
-        contour_sizes = [(cv2.contourArea(contour)>1000) for contour in contours]
-        ind_temp = np.argwhere(contour_sizes)
-        for j in range(ind_temp.shape[0]):
-            largest_contours = contours[ind_temp[j,0]]
-        
-            #for k in range(largest_contours.__len__()):
-            box = cv2.boundingRect(largest_contours)
-            #if detect_color(rgb_img[yy:yy+h,xx:xx+w]==False):
-            if float(box[2])/box[3] >1.5 or float(box[2])/box[3] < 0.7:     # flat or upright battery?
-                cv2.rectangle(rgb_img, (box[0], box[1]), (box[0]+box[2], box[1]+box[3]), (0,0,255), 2)
-        cv2.imshow('detected battery or wall',rgb_img)
-        cv2.waitKey(2)
-
-        cv2.imshow('sobel',sobely_thresh)
-        cv2.waitKey(2)
-        print('got here')  
 
 # MAIN FUNCTION
 def main():
@@ -328,7 +302,8 @@ def main():
     # Subscriber to RGB image
     rospy.Subscriber('/camera/rgb/image_rect_color', Image, callback_storage_image)
     # Subscriber to depth image
-    rospy.Subscriber("/camera/depth_registered/sw_registered/image_rect", Image, callback_depth)
+    #rospy.Subscriber("/camera/depth_registered/sw_registered/image_rect", Image, callback_depth)
+    rospy.Subscriber("/camera/depth/image", Image, callback_depth)
     
     r = rospy.Rate(5) # Hz
     while not rospy.is_shutdown():
@@ -390,10 +365,10 @@ def main():
             ### DETECT BATTERY FUNCTION
             detect_battery()
 
-            print('##########')
-            print(local_map)
-            print('## FPS: ' + str(fps))
-            print('')
+            # print('##########')
+            # print(local_map)
+            # print('## FPS: ' + str(fps))
+            # print('')
         
         r.sleep()
 

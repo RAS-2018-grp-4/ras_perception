@@ -14,15 +14,17 @@ class map_object{
     public:
 
     //Members: shape, position, its value and if it has been already picked or not
-    vector<int> shape;
+    vector<int> shape; // 0: Ball, 1: Cube, 2: Cylinder, 3: Hollow cube, 4: Cross
+                       // 5: Triangle, 6: Star, 7: Nothing, 8: Obstacle!!!
     geometry_msgs::PointStamped map_position;
     int color;
     int value;
+    float real_priority_value;
     int probability;
     bool picked;
 
     map_object();
-    map_object(geometry_msgs::PointStamped, int, int);
+    map_object(geometry_msgs::PointStamped, int, int,float);
 
     //void publish_position_best_object();
 };
@@ -30,7 +32,7 @@ class map_object{
 //Default constructor
 map_object::map_object(void){
     vector<int> temp_shape(9,0);
-    temp_shape[8] = 100;
+    temp_shape[7] = 100;
     shape = temp_shape;
     color = 0;
     probability = 50;
@@ -39,32 +41,120 @@ map_object::map_object(void){
 }
 
 //Constructor overloaded with known position, color and shape
-map_object::map_object(geometry_msgs::PointStamped position, int this_color, int this_shape){
+map_object::map_object(geometry_msgs::PointStamped position, int this_color, int this_shape, float this_distance){
     vector<int> temp_shape(9,0);
     temp_shape[this_shape] = 100;
     shape = temp_shape;
     color = this_color;
     switch(this_color){
         case 0: //the object is yellow
-            value = 2;
+            if((this_shape != 0) || (this_shape != 1)){
+                temp_shape[7] = 100; //The identified shape is not possible
+                value = 1;
+            }
+            else if(this_shape == 0){ //It is a yellow ball
+                temp_shape[this_shape] = 100;
+                value = 5;
+            }
+            else{ //It is a yellow cube
+                temp_shape[this_shape] = 100;
+                value = 10;
+            }
+            shape = temp_shape;
             break;
         case 1: //the object is green
-            value = 5;
+            switch(this_shape){
+                case 1: //It is a green cube
+                    temp_shape[this_shape] = 100;
+                    value = 30;
+                    break;
+                case 2: //It is a green cylinder
+                    temp_shape[this_shape] = 100;
+                    value = 40;
+                    break;
+                case 3: //It is a green hollow cube
+                    temp_shape[this_shape] = 100;
+                    value = 50;
+                    break;
+                default: //The identified shape is not possible
+                    temp_shape[7] = 100;
+                    value = 1;
+                    break;
+            }
             break;
         case 2: //the object is orange
-            value = 100;
+            switch(this_shape){
+                case 4: //It is a orange cross
+                    temp_shape[this_shape] = 100;
+                    value = 100;
+                    break;
+                case 6: //It is Patric!!
+                    temp_shape[this_shape] = 100;
+                    value = 1000;
+                    break;
+                default: //The identified shape is not possible
+                    temp_shape[7] = 100;
+                    value = 1;
+                    break;
+            }
             break;
         case 3: //the object is red
-            value = 20;
+            switch(this_shape){
+                case 2: //It is a red cylinder
+                    temp_shape[this_shape] = 100;
+                    value = 30;
+                    break;
+                case 3: //It is a red hollow cube
+                    temp_shape[this_shape] = 100;
+                    value = 130;
+                    break;
+                case 0: //It is a red ball
+                    temp_shape[this_shape] = 100;
+                    value = 15;
+                    break;
+                default: //The identified shape is not possible
+                    temp_shape[7] = 100;
+                    value = 1;
+                    break;
+            }
             break;
         case 4: //the object is blue
-            value = 10;
+            switch(this_shape){
+                case 1: //It is a blue cube
+                    temp_shape[this_shape] = 100;
+                    value = 60;
+                    break;
+                case 5: //It is a blue triangle
+                    temp_shape[this_shape] = 100;
+                    value = 70;
+                    break;
+
+                default: //The identified shape is not possible
+                    temp_shape[7] = 100;
+                    value = 1;
+                    break;
+            }
             break;
         case 5: //the object is purple
-            value = 40;
+            switch(this_shape){
+                case 4: //It is a purple cross
+                    temp_shape[this_shape] = 100;
+                    value = 120;
+                    break;
+                case 6: //It is a purple star
+                    temp_shape[this_shape] = 100;
+                    value = 200;
+                    break;
+
+                default: //The identified shape is not possible
+                    temp_shape[7] = 100;
+                    value = 1;
+                    break;
+            }
             break;
   
     }
+    real_priority_value = (float)value / (2*this_distance);
     picked = false;
     probability = 50;
     map_position = position;
@@ -157,17 +247,20 @@ void analyze_objects(object_saving::objects_found objects_found){
             if((!std::isnan(objects_found_temp.array_objects_found[q].point.x)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.y)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.z))){
                 int temp_counter = 0;
                 for(int i= 0; i < objects.size(); i++){
-                    if(sqrt(pow(objects_found_temp.array_objects_found[q].point.x-objects[i].map_position.point.x,2)+ pow(objects_found_temp.array_objects_found[q].point.y-objects[i].map_position.point.y,2))> 0.18){
+                    if(sqrt(pow(objects_found_temp.array_objects_found[q].point.x-objects[i].map_position.point.x,2)+ pow(objects_found_temp.array_objects_found[q].point.y-objects[i].map_position.point.y,2))> 0.10){
                         temp_counter += 1;
                     }
                     else if(objects_found_temp.array_colors[q] == objects[i].color){
+                        //We have found the same object as one previously found
                         objects_same[i] = 1;
                         objects_same_detected[i] = q; 
+
                         //objects_same.push_back(i); //??
                     }
                 }
                 if(temp_counter == objects.size()){
-                    map_object temp_object(objects_found_temp.array_objects_found[q],objects_found_temp.array_colors[q],objects_found_temp.array_shape[q]);
+                    float distance_to_beginning = sqrt(pow(objects_found_temp.array_objects_found[q].point.x-0.2,2) + pow(objects_found_temp.array_objects_found[q].point.y-0.2,2));
+                    map_object temp_object(objects_found_temp.array_objects_found[q],objects_found_temp.array_colors[q],objects_found_temp.array_shape[q],distance_to_beginning);
                     objects.push_back(temp_object);
                     number_objects += 1;
                     cout<<"Found a new object"<<endl;
@@ -182,11 +275,19 @@ void analyze_objects(object_saving::objects_found objects_found){
             if(objects_same[q] == 1){
                 //ADD HERE CODE FOR CHANGING PROBABILITY OF SHAPE------------
                 //WHEN SHAPE IS DETECTED AND NOT UNKNOWN---------------------
-                if(objects[q].probability < 991) objects[q].probability += 10; //We have found the same object, so probability gets higher
+                if(objects[q].probability < 991) objects[q].probability += 5; //We have found the same object, so probability gets higher
                 else objects[q].probability = 1000;
-                //if(objects[q].shape[8] = 100) objects[objects_found_temp.array_shape[objects_same_detected[q]]].shape = 100;
-
-
+                if(objects[q].shape[7] = 100){
+                    objects[q].shape[objects_found_temp.array_shape[objects_same_detected[q]]] = 100;
+                } 
+                else if(objects[q].shape[8] != 100){
+                    for(int w = 0; w < 9; w++){
+                        if(w != objects_same_detected[q]){
+                            if(objects[q].shape[w] > 0) objects[q].shape[w] -= 1;
+                        }
+                        else if(objects[q].shape[w] < 100) objects[q].shape[w] += 1;
+                    }
+                }
             } 
             else if(objects_same[q] == 0){
                 if(objects[q].probability > 50) objects[q].probability -= 1; //we have not found this object, so prob. gets reduced
@@ -198,7 +299,8 @@ void analyze_objects(object_saving::objects_found objects_found){
         //There are no objects yet, so the first object is created in the vector
         for(int q = 0;q<objects_found_temp.number_of_objects;q++){
             if((!std::isnan(objects_found_temp.array_objects_found[q].point.x)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.y)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.z))){
-                map_object temp_object(objects_found_temp.array_objects_found[q],objects_found_temp.array_colors[q],objects_found_temp.array_shape[q]);
+                float distance_to_beginning = sqrt(pow(objects_found_temp.array_objects_found[q].point.x-0.2,2) + pow(objects_found_temp.array_objects_found[q].point.y-0.2,2));
+                map_object temp_object(objects_found_temp.array_objects_found[q],objects_found_temp.array_colors[q],objects_found_temp.array_shape[q],distance_to_beginning);
                 objects.push_back(temp_object);
                 number_objects += 1;
             }
@@ -282,7 +384,9 @@ int main(int argc, char **argv)
             int best_value = 0;
             int best_index;
             for(int i= 0; i< objects.size(); i++){
-                temp_objects.objects_detected.push_back(objects[i].map_position);
+                temp_objects.objects_detected_position.push_back(objects[i].map_position);
+                temp_objects.array_probability.push_back(objects[i].probability);
+                temp_objects.array_real_priority_value.push_back(objects[i].real_priority_value);
                 if(objects[i].value > best_value){
                     best_index = i;
                     best_value = objects[i].value;
