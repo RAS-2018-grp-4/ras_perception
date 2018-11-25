@@ -43,8 +43,6 @@ map_object::map_object(void){
 //Constructor overloaded with known position, color and shape
 map_object::map_object(geometry_msgs::PointStamped position, int this_color, int this_shape, float this_distance){
     vector<int> temp_shape(9,0);
-    temp_shape[this_shape] = 100;
-    shape = temp_shape;
     color = this_color;
     switch(this_color){
         case 0: //the object is yellow
@@ -154,6 +152,7 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
             break;
   
     }
+    shape = temp_shape;
     real_priority_value = (float)value / (2*this_distance);
     picked = false;
     probability = 50;
