@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+'''
+Author:     Ajinkya 
+Date:       2018/11/20
+Description: This script reads the live camera feed and allows you to set HSV params.
+
+Credits and source: https://botforge.wordpress.com/2016/07/02/basic-color-tracker-using-opencv-python/
+'''
 #import the necessary packages
 import cv2
 import numpy as np

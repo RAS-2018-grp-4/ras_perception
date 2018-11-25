@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+'''
+Author:     Ajinkya 
+Date:       2018/11/20
+Description: This script reads the live camera feed and allows you to set HSV params.
+
+Credits and source: https://botforge.wordpress.com/2016/07/02/basic-color-tracker-using-opencv-python/
+'''
 import numpy as np 
 import cv2
 import rospy 
@@ -6,8 +14,8 @@ from cv_bridge import CvBridge
 
 rospy.init_node('publish_webcam', anonymous=True)
 
-#cap = cv2.VideoCapture(0)
-cap = cv2.VideoCapture('/home/ajinkya/ras_ws/src/ras_perception/ras_object_detection_python/src/vid2.mp4')
+cap = cv2.VideoCapture(0)
+#ap = cv2.VideoCapture('/home/ajinkya/ras_ws/src/ras_perception/ras_object_detection_python/src/vid2.mp4')
 
 capturedImage = rospy.Publisher("/webcam_image", Image, queue_size=10)
 
