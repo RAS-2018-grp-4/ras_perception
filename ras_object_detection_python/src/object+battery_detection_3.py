@@ -14,7 +14,8 @@ from cv_bridge import CvBridge, CvBridgeError
 import time
 import copy
 from object_detection_test.msg import objects_found
-from geometry_msgs.msg import PointStamped
+from geometry_msgs.msg import PointStamped, PoseArray
+import tf
 
 '''
 @author:Ajinkya Khoche
@@ -54,12 +55,15 @@ class Frame:
         self.depth = []
         self.flagDepth = False
         
-
-class detection_class():
-    def __init__(self):
-        # create a global object of Frame
-        self.lastFrame = Frame()
-
+lastFrame = Frame()
+# class Detector():
+#     def __init__(self):
+#         # create a global object of Frame
+#         self.lastFrame = Frame()
+listener_rgb2depth_optical = tf.TransformListener()
+listener_rgboptical2map = tf.TransformListener()
+listener_depthoptical2map = tf.TransformListener()
+offset_rgb2depth_optical = 0.03 #along x in meters
 
 
 #json_file = open('../../DL_training/KERAS_model/saved_models/cropped_shape_1.json', 'r')
@@ -89,14 +93,20 @@ mean = 85.69786
 
 expansion_param = 0.25
 
-#Intrinsic camera parameters
-cy = 352.49
-fy = 672.55
-cx = 635.18
-fx = 672.55
+#Intrinsic camera parameters rgb image
+cy_rgb = 352.49
+fy_rgb = 672.55
+cx_rgb = 635.18
+fx_rgb = 672.55
+
+#Intrinsic camera parameters depth image
+cy_depth = 352.49
+fy_depth = 672.55
+cx_depth = 635.18
+fx_depth = 672.55
 
 
-def get_depth(bBox):
+def get_world_coord_rgb(bBox):
     x = bBox[0]
     y = bBox[1]
     w = bBox[2]
@@ -128,8 +138,8 @@ def get_depth(bBox):
     # use intrinsic camera parameters to convert from pixel coordinate to 
     # world coordinate (http://docs.ros.org/kinetic/api/sensor_msgs/html/msg/CameraInfo.html)
     try:
-        y_w = (round(y+h/2) - cy) / fy * z
-        x_w = (round(x+w/2) - cx) / fx * z
+        y_w = (round(y+h/2) - cy_rgb) / fy_rgb * z
+        x_w = (round(x+w/2) - cx_rgb) / fx_rgb * z
     except:
         pass
         #continue
@@ -137,32 +147,42 @@ def get_depth(bBox):
 
 
 
-def detect_object(image, color_label):
-    # variables to be returned
-    x_w = None
-    y_w = None
-    z_w = None
-    pred_shape_label = None
-    pred_color_label = None
+def detect_object(image):
+    # Parameters for local map
+    object_x = []
+    object_y = []
+    object_z = []
+    object_shape = []
+    object_color =[]
 
-    # Threshold HSV range for chosen color label
-    mask = threshold_hsv(image, color_label)
+    for color_label in range(N_COLORS):
+        # # variables to be returned
+        # x_w = None
+        # y_w = None
+        # z_w = None
+        # pred_shape_label = None
+        # pred_color_label = None
 
-    mask_morph = morphOpen(mask)
+        # Threshold HSV range for chosen color label
+        mask = threshold_hsv(image, color_label)
+        # Morphological opening
+        mask_morph = morphOpen(mask)
 
-    if DEBUG: 
-        cv2.imshow('mask_blur_morph', mask_morph)
-        cv2.waitKey(10)
+        # find contours
+        _, contours, _ = cv2.findContours(mask_morph, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contour_sizes = [(cv2.contourArea(contour)>2000) for contour in contours]
+        ind_temp = np.argwhere(contour_sizes)
+        
+        for k in range(ind_temp.shape[0]):
+            largest_contours = contours[ind_temp[k,0]]
+            #largest_contours = sorted(contours, key=cv2.contourArea)[-10:]
+        
+        #for k in range(largest_contours.__len__()):
+            xx, yy, w, h = cv2.boundingRect(largest_contours)
+            #print(box[2]*box[3])
 
-    # find contours
-    _, contours, _ = cv2.findContours(mask_morph, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    largest_contours = sorted(contours, key=cv2.contourArea)[-10:]
-    for k in range(largest_contours.__len__()):
-        xx, yy, w, h = cv2.boundingRect(largest_contours[k])
-        #print(box[2]*box[3])
-
-        if float(h)/w > 0.8 and float(h)/w<1.2:
-            if w*h > 2000:
+            if float(h)/w > 0.8 and float(h)/w<1.2:
+                #if w*h > 2000:
                 # we need to give slightly bigger image to detector to get a clear detection
                 roi_x = max(0, int(xx - expansion_param*w))
                 roi_y = max(0, int(yy - expansion_param*h))
@@ -198,7 +218,7 @@ def detect_object(image, color_label):
                             #if bBox_temp !=None:
                             try:
                                 # get the depth of center of detected bbox
-                                x_w, y_w, z_w = get_depth(bBox_temp)
+                                x_w, y_w, z_w = get_world_coord_rgb(bBox_temp)
 
                                 #print(z_w)
                                 #draw_result([xx,yy,w,h], image, pred_shape, pred_color)
@@ -207,12 +227,43 @@ def detect_object(image, color_label):
                                 draw_result([roi_x,roi_y, roi_w, roi_h], image, (255,0,0)) 
 
                                 #print(color_class[np.argmax(pred_color)]+ ' ' +shape_class[pred_shape_label])
+                                object_x.append(x_w)
+                                object_y.append(y_w)
+                                object_z.append(z_w)
+                                object_shape.append(pred_shape_label)
+                                object_color.append(pred_color_label)
                             except:
                                 pass
                                 #print('wierd error!')
-    return x_w, y_w, z_w, pred_shape_label, pred_color_label
+    
+    local_map = np.array((object_x, object_y, object_z, object_shape, object_color)).T
+
+    obj_array = objects_found()
+    obj_array.number_of_objects = local_map.shape[0]
+    obj_array.array_colors = local_map[:,4].tolist()
+    obj_array.array_shape = local_map[:,3].tolist()
+
+    # wait for transform from rgb optical to map frame
+    #listener_rgboptical2map.waitForTransform("camera_rgb_optical_frame", "/map", rospy.Time(0),rospy.Duration(4.0))
+
+    for j in range(obj_array.number_of_objects):
+        point_rgboptical = PointStamped()
+        #point_map = PointStamped()
+        point_rgboptical.header.frame_id = 'camera_rgb_optical_frame'
+
+        #point_temp.header.stamp = rospy.Time.now()
+        point_rgboptical.point.x = local_map[j,0]
+        point_rgboptical.point.y = local_map[j,1]
+        point_rgboptical.point.z = local_map[j,2]
+
+        #point_map = listener_rgboptical2map.transformPoint("/map",point_rgboptical)
+        obj_array.array_objects_found.append(point_rgboptical)
+
+    return obj_array
 
 def detect_battery():
+    battery_pos_array = PoseArray()
+
     global lastFrame
     depth_img = lastFrame.depth
     rgb_img = lastFrame.image
@@ -236,7 +287,7 @@ def detect_battery():
     _, contours, _ = cv2.findContours(sobely_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
     if contours != []:
-        contour_sizes = [(cv2.contourArea(contour)>5000) for contour in contours]
+        contour_sizes = [(cv2.contourArea(contour)>6000) for contour in contours]
         ind_temp = np.argwhere(contour_sizes)
         for j in range(ind_temp.shape[0]):
             largest_contours = contours[ind_temp[j,0]]
@@ -244,17 +295,22 @@ def detect_battery():
             #for k in range(largest_contours.__len__()):
             box = cv2.boundingRect(largest_contours)
             #if detect_color(rgb_img[yy:yy+h,xx:xx+w]==False):
-            if  cv2.contourArea(largest_contours) < 6000:
-                if float(box[2])/box[3] >1.5 or float(box[2])/box[3] < 0.7:     # flat or upright battery?
-                    cv2.rectangle(rgb_img, (box[0], box[1]), (box[0]+box[2], box[1]+box[3]), (0,0,255), 2)
-            else:
-                cv2.rectangle(rgb_img, (box[0], box[1]), (box[0]+box[2], box[1]+box[3]), (0,0,255), 2)
-            print(cv2.contourArea(largest_contours))
+            # if  cv2.contourArea(largest_contours) < 6000:
+            #     if float(box[2])/box[3] >1.5 or float(box[2])/box[3] < 0.7:     # flat or upright battery?
+            #         cv2.rectangle(rgb_img, (box[0], box[1]), (box[0]+box[2], box[1]+box[3]), (0,0,255), 2)
+            # else:
+            cv2.rectangle(rgb_img, (box[0], box[1]), (box[0]+box[2], box[1]+box[3]), (0,0,255), 2)
+            #print(cv2.contourArea(largest_contours))
+        
+            # take a pixel wide strip for each box and find its world coordinates
+             
         cv2.imshow('detected battery or wall',rgb_img)
         cv2.waitKey(2)
 
         cv2.imshow('sobel',sobely_thresh)
         cv2.waitKey(2)
+
+
         # print('got here')  
 
     
@@ -305,6 +361,7 @@ def main():
     processedImage = rospy.Publisher("/processedImage", Image, queue_size=10)
     # Publisher for objects found
     obj_pub = rospy.Publisher("/object_position_cam_link", objects_found, queue_size=1)
+    #obj_pub = rospy.Publisher("/object_position_map", objects_found, queue_size=1)
 
     # Subscriber to RGB image
     rospy.Subscriber('/camera/rgb/image_rect_color', Image, callback_storage_image)
@@ -328,39 +385,42 @@ def main():
             #print('REACHED THIS POINT')
             a = datetime.now()
             frame = cv2.cvtColor(processFrame.image, cv2.COLOR_RGB2BGR)
-            for i in range(N_COLORS):
-                x_w, y_w, z_w, pred_shape_label, pred_color_label = detect_object(frame, i)
+            # for i in range(N_COLORS):
+            #     x_w, y_w, z_w, pred_shape_label, pred_color_label = detect_object(frame, i)
 
-                if z_w !=None:
-                    # fill in local map for that object
-                    object_x.append(x_w)
-                    object_y.append(y_w)
-                    object_z.append(z_w)
-                    object_shape.append(pred_shape_label)
-                    object_color.append(pred_color_label)
+            #     if z_w !=None:
+            #         # fill in local map for that object
+            #         object_x.append(x_w)
+            #         object_y.append(y_w)
+            #         object_z.append(z_w)
+            #         object_shape.append(pred_shape_label)
+            #         object_color.append(pred_color_label)
             
-            local_map = local_map = np.array((object_x, object_y, object_z, object_shape, object_color)).T
+            # local_map = np.array((object_x, object_y, object_z, object_shape, object_color)).T
 
-            b = datetime.now()
-            c = b - a
-            fps = 1.0/(c.total_seconds())
+            # b = datetime.now()
+            # c = b - a
+            # fps = 1.0/(c.total_seconds())
 
-            # cv2.imshow('result', frame)
-            # cv2.waitKey(20)
+            # # cv2.imshow('result', frame)
+            # # cv2.waitKey(20)
+            # obj_array = objects_found()
+            # obj_array.number_of_objects = local_map.shape[0]
+            # obj_array.array_colors = local_map[:,4].tolist()
+            # obj_array.array_shape = local_map[:,3].tolist()
+
+            # for j in range(local_map.shape[0]):
+            #     point_temp = PointStamped()
+            #     point_temp.header.frame_id = '/camera_link'
+            #     #point_temp.header.stamp = rospy.Time.now()
+            #     point_temp.point.x = local_map[j,0]
+            #     point_temp.point.y = local_map[j,1]
+            #     point_temp.point.z = local_map[j,2]
+            #     obj_array.array_objects_found.append(point_temp)
+            
             obj_array = objects_found()
-            obj_array.number_of_objects = local_map.shape[0]
-            obj_array.array_colors = local_map[:,4].tolist()
-            obj_array.array_shape = local_map[:,3].tolist()
+            obj_array = detect_object(frame)
 
-            for j in range(local_map.shape[0]):
-                point_temp = PointStamped()
-                point_temp.header.frame_id = '/camera_link'
-                #point_temp.header.stamp = rospy.Time.now()
-                point_temp.point.x = local_map[j,0]
-                point_temp.point.y = local_map[j,1]
-                point_temp.point.z = local_map[j,2]
-                obj_array.array_objects_found.append(point_temp)
-                
             # Publish objects found
             if obj_array.number_of_objects!=0:
                 obj_pub.publish(obj_array)
