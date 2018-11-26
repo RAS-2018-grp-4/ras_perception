@@ -51,7 +51,7 @@ def threshold_hsv(image, color_label):
         mask = cv2.inRange(hsv, np.array([70,0,0]), np.array([120,255,255]))
     elif color_label == 5:  #PURPLE
         mask = cv2.inRange(hsv, np.array([28,0,50]), np.array([179,166,170]))
-    elif color_label == 6:  #BLACK
+    elif color_label == 7:  #BLACK
         mask = cv2.inRange(hsv, np.array([0,0,0]), np.array([179,255,50]))
 
     return mask
