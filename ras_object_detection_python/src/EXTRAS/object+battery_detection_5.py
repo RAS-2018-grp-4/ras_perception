@@ -326,26 +326,17 @@ def detect_battery(rgb_img, depth_img):
                         point_depthoptical = Pose()
                         #point_depthoptical.header.frame_id = "camera_depth_optical_frame"
                         
-                        '''Below lines applicable if we use PoseStamped()'''
                         #point_temp.header.stamp = rospy.Time.now()
                         #point_depthoptical.header.frame_id = depth_img.header.frame_id
                         #point_depthoptical.header.stamp = rospy.Time.now()
-                        # point_depthoptical.pose.position.x = x_w
-                        # point_depthoptical.pose.position.y = y_w
-                        # point_depthoptical.pose.position.z = z_w
+                        point_depthoptical.pose.position.x = x_w
+                        point_depthoptical.pose.position.y = y_w
+                        point_depthoptical.pose.position.z = z_w
 
-                        # point_depthoptical.pose.orientation.x = 0.0
-                        # point_depthoptical.pose.orientation.y = 0.0
-                        # point_depthoptical.pose.orientation.z = 0.0
-                        # point_depthoptical.pose.orientation.w = 1.0
-                        point_depthoptical.position.x = x_w
-                        point_depthoptical.position.y = y_w
-                        point_depthoptical.position.z = z_w
-
-                        point_depthoptical.orientation.x = 0.0
-                        point_depthoptical.orientation.y = 0.0
-                        point_depthoptical.orientation.z = 0.0
-                        point_depthoptical.orientation.w = 1.0
+                        point_depthoptical.pose.orientation.x = 0.0
+                        point_depthoptical.pose.orientation.y = 0.0
+                        point_depthoptical.pose.orientation.z = 0.0
+                        point_depthoptical.pose.orientation.w = 1.0
                         battery_pos_array.poses.append(point_depthoptical)
                     except:
                         pass
