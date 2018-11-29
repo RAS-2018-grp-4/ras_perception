@@ -1,11 +1,19 @@
 #include <iostream>
 #include <ros/ros.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <cmath>
 #include "std_msgs/String.h"
 #include "geometry_msgs/PointStamped.h"
 #include "geometry_msgs/Point.h"
+#include "geometry_msgs/Twist.h"
 #include <visualization_msgs/MarkerArray.h>
 #include "object_saving/objects.h"
 #include "object_saving/objects_found.h"
+#include <sstream>
+#include <limits>
+#include <iostream>
+#include <fstream>
 
 using namespace std;
 
@@ -162,146 +170,156 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
 //Global variables needed for this node
 std::vector<map_object> objects;
 int number_objects;
+geometry_msgs::Twist current_robot_vel;
 
 void analyze_objects(object_saving::objects_found objects_found){
     vector<vector<int> > index_conc;
     object_saving::objects_found objects_found_temp = objects_found;
 
-    //Robustness against same object detected in two bounding boxes
-    for(int j = 0; j < objects_found.number_of_objects;j++){
-        vector<int> temp_coincidence;
-        temp_coincidence.push_back(j);
-        for(int k = 0; k < objects_found.number_of_objects;k++){
-            if(k != j){
-                if(sqrt(pow(objects_found.array_objects_found[j].point.x-objects_found.array_objects_found[k].point.x,2)+ pow(objects_found.array_objects_found[j].point.y-objects_found.array_objects_found[k].point.y,2)) < 0.05){
-                    if(objects_found.array_colors[j] == objects_found.array_colors[k]){
-                        //There is an object detected twice or more
-                        temp_coincidence.push_back(k);
-                    }
-                }
-            }
-        }
-        if(temp_coincidence.size() > 1){
-            index_conc.push_back(temp_coincidence);
-            //cout<<"Detected a duplicate"<<endl;
-        }
-    }
+    if(abs(current_robot_vel.angular.z) < 0.2){
 
-    int finish_for = index_conc.size();
-    if(finish_for != 0){
-        for(int j = 0; j < finish_for; j++){
-            for(int k = 0; k < finish_for; k++){
-                int equal = 0;
-                if((j != k) && (index_conc[j].size() == index_conc[k].size())){
-                    for(int q = 0; q < index_conc[k].size(); q++){
-                        if(index_conc[j][0] == index_conc[k][q]){
-                            //j = k; k is eliminated from the vector
-                            equal = 1;
+        //Robustness against same object detected in two bounding boxes
+        for(int j = 0; j < objects_found.number_of_objects;j++){
+            vector<int> temp_coincidence;
+            temp_coincidence.push_back(j);
+            for(int k = 0; k < objects_found.number_of_objects;k++){
+                if(k != j){
+                    if(sqrt(pow(objects_found.array_objects_found[j].point.x-objects_found.array_objects_found[k].point.x,2)+ pow(objects_found.array_objects_found[j].point.y-objects_found.array_objects_found[k].point.y,2)) < 0.05){
+                        if(objects_found.array_colors[j] == objects_found.array_colors[k]){
+                            //There is an object detected twice or more
+                            temp_coincidence.push_back(k);
                         }
                     }
                 }
-                if(equal != 0){
-                    finish_for -= 1;
-                    index_conc.erase(index_conc.begin()+1);
-                }
+            }
+            if(temp_coincidence.size() > 1){
+                index_conc.push_back(temp_coincidence);
+                //cout<<"Detected a duplicate"<<endl;
             }
         }
 
-        for(int j = 0; j < finish_for; j++){
-            float avg_x = 0.0;
-            float avg_y = 0.0;
-            for(int k = 0; k < index_conc[j].size();k++){
-                avg_x += objects_found_temp.array_objects_found[index_conc[j][k]].point.x;
-                avg_y += objects_found_temp.array_objects_found[index_conc[j][k]].point.y;
+        int finish_for = index_conc.size();
+        if(finish_for != 0){
+            for(int j = 0; j < finish_for; j++){
+                for(int k = 0; k < finish_for; k++){
+                    int equal = 0;
+                    if((j != k) && (index_conc[j].size() == index_conc[k].size())){
+                        for(int q = 0; q < index_conc[k].size(); q++){
+                            if(index_conc[j][0] == index_conc[k][q]){
+                                //j = k; k is eliminated from the vector
+                                equal = 1;
+                            }
+                        }
+                    }
+                    if(equal != 0){
+                        finish_for -= 1;
+                        index_conc.erase(index_conc.begin()+1);
+                    }
+                }
             }
-            avg_x /= index_conc[j].size();
-            avg_y /= index_conc[j].size();
-            objects_found_temp.array_objects_found[index_conc[j][0]].point.x = avg_x;
-            objects_found_temp.array_objects_found[index_conc[j][0]].point.y = avg_y;
-            //Now we eliminate the same objects
-            for(int k = 1; k < index_conc[j].size();k++){
-                objects_found_temp.array_objects_found.erase(objects_found_temp.array_objects_found.begin()+index_conc[j][k]-1);
-                objects_found_temp.array_colors.erase(objects_found_temp.array_colors.begin()+index_conc[j][k]-1);
-                objects_found_temp.number_of_objects -= 1;
-                //Now we gotta change the vector of indexes of duplicate objects
-                for(int q = 0;q<index_conc.size();q++){
-                    for(int w = 0; w<index_conc[q].size();w++){
-                        if(index_conc[q][w] >= index_conc[j][k]) index_conc[q][w] -= 1;
+
+            for(int j = 0; j < finish_for; j++){
+                float avg_x = 0.0;
+                float avg_y = 0.0;
+                for(int k = 0; k < index_conc[j].size();k++){
+                    avg_x += objects_found_temp.array_objects_found[index_conc[j][k]].point.x;
+                    avg_y += objects_found_temp.array_objects_found[index_conc[j][k]].point.y;
+                }
+                avg_x /= index_conc[j].size();
+                avg_y /= index_conc[j].size();
+                objects_found_temp.array_objects_found[index_conc[j][0]].point.x = avg_x;
+                objects_found_temp.array_objects_found[index_conc[j][0]].point.y = avg_y;
+                //Now we eliminate the same objects
+                for(int k = 1; k < index_conc[j].size();k++){
+                    objects_found_temp.array_objects_found.erase(objects_found_temp.array_objects_found.begin()+index_conc[j][k]-1);
+                    objects_found_temp.array_colors.erase(objects_found_temp.array_colors.begin()+index_conc[j][k]-1);
+                    objects_found_temp.number_of_objects -= 1;
+                    //Now we gotta change the vector of indexes of duplicate objects
+                    for(int q = 0;q<index_conc.size();q++){
+                        for(int w = 0; w<index_conc[q].size();w++){
+                            if(index_conc[q][w] >= index_conc[j][k]) index_conc[q][w] -= 1;
+                        }
                     }
                 }
             }
         }
-    }
-    //else cout<<"No duplicates detected"<<endl;
+        //else cout<<"No duplicates detected"<<endl;
 
-    //Once having eliminated duplicated detected objects,
-    //they are marked in the map if they are not close to another existing object in the map 
-    //If there is detecting the same object, the probability of it gets higher by 10 (until 1000)
-    if(objects.size()!= 0){
-        int previous_size = objects.size();
-        vector<int> objects_same(previous_size,0);
-        vector<int> objects_same_detected(previous_size,0);
-        for(int q = 0; q < objects_found_temp.number_of_objects;q++){
-        //Compare if it's the same object, not taking into account the closest ones
-            if((!std::isnan(objects_found_temp.array_objects_found[q].point.x)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.y)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.z))){
-                int temp_counter = 0;
-                for(int i= 0; i < objects.size(); i++){
-                    if(sqrt(pow(objects_found_temp.array_objects_found[q].point.x-objects[i].map_position.point.x,2)+ pow(objects_found_temp.array_objects_found[q].point.y-objects[i].map_position.point.y,2))> 0.10){
-                        temp_counter += 1;
-                    }
-                    else if(objects_found_temp.array_colors[q] == objects[i].color){
-                        //We have found the same object as one previously found
-                        objects_same[i] = 1;
-                        objects_same_detected[i] = q; 
+        //Once having eliminated duplicated detected objects,
+        //they are marked in the map if they are not close to another existing object in the map 
+        //If there is detecting the same object, the probability of it gets higher by 10 (until 1000)
+        if(objects.size()!= 0){
+            int previous_size = objects.size();
+            vector<int> objects_same(previous_size,0);
+            vector<int> objects_same_detected(previous_size,0);
+            for(int q = 0; q < objects_found_temp.number_of_objects;q++){
+            //Compare if it's the same object, not taking into account the closest ones
+                if((!std::isnan(objects_found_temp.array_objects_found[q].point.x)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.y)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.z))){
+                    int temp_counter = 0;
+                    for(int i= 0; i < objects.size(); i++){
+                        if(sqrt(pow(objects_found_temp.array_objects_found[q].point.x-objects[i].map_position.point.x,2)+ pow(objects_found_temp.array_objects_found[q].point.y-objects[i].map_position.point.y,2))> 0.10){
+                            temp_counter += 1;
+                        }
+                        else if(objects_found_temp.array_colors[q] == objects[i].color){
+                            //We have found the same object as one previously found
+                            objects_same[i] = 1;
+                            objects_same_detected[i] = q; 
 
-                        //objects_same.push_back(i); //??
+                            //objects_same.push_back(i); //??
+                        }
                     }
+                    if(temp_counter == objects.size()){
+                        float distance_to_beginning = sqrt(pow(objects_found_temp.array_objects_found[q].point.x-0.2,2) + pow(objects_found_temp.array_objects_found[q].point.y-0.2,2));
+                        map_object temp_object(objects_found_temp.array_objects_found[q],objects_found_temp.array_colors[q],objects_found_temp.array_shape[q],distance_to_beginning);
+                        objects.push_back(temp_object);
+                        number_objects += 1;
+                        cout<<"Found a new object"<<endl;
+                    }
+                    else{
+                        cout<<"Detected but too close to an object"<<endl;
+                        //objects[same_index].probability += 10; //We have found the same object, so probability gets higher
+                    } 
                 }
-                if(temp_counter == objects.size()){
+            }
+            for(int q = 0; q < previous_size; q++){
+                if(objects_same[q] == 1){
+                    //ADD HERE CODE FOR CHANGING PROBABILITY OF SHAPE------------
+                    //WHEN SHAPE IS DETECTED AND NOT UNKNOWN---------------------
+                    if(objects[q].probability < 991) objects[q].probability += 5; //We have found the same object, so probability gets higher
+                    else objects[q].probability = 1000;
+                    if(objects[q].shape[7] == 100){
+                        objects[q].shape[objects_found_temp.array_shape[objects_same_detected[q]]] = 100;
+                        objects[q].shape[7] = 0;
+                    } 
+                    else if(objects[q].shape[8] != 100){
+                        for(int w = 0; w < 9; w++){
+                            if(w != objects_found_temp.array_shape[objects_same_detected[q]]){
+                                if(objects[q].shape[w] > 0) objects[q].shape[w] -= 1;
+                            }
+                            else if(objects[q].shape[w] < 100) objects[q].shape[objects_found_temp.array_shape[objects_same_detected[q]]] += 1;
+                        }
+                    }
+                } 
+                else if(objects_same[q] == 0){
+                    if(objects[q].probability > 50) objects[q].probability -= 1; //we have not found this object, so prob. gets reduced
+                } 
+            }
+            // if(objects_found_temp.number_of_objects == 0){
+            //     for(int q = 0; q < objects.size(); q++){
+            //         objects[q].probability -= 1;
+            //     }
+            // }
+        }
+
+        else{
+            //There are no objects yet, so the first object is created in the vector
+            for(int q = 0;q<objects_found_temp.number_of_objects;q++){
+                if((!std::isnan(objects_found_temp.array_objects_found[q].point.x)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.y)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.z))){
                     float distance_to_beginning = sqrt(pow(objects_found_temp.array_objects_found[q].point.x-0.2,2) + pow(objects_found_temp.array_objects_found[q].point.y-0.2,2));
                     map_object temp_object(objects_found_temp.array_objects_found[q],objects_found_temp.array_colors[q],objects_found_temp.array_shape[q],distance_to_beginning);
                     objects.push_back(temp_object);
                     number_objects += 1;
-                    cout<<"Found a new object"<<endl;
                 }
-                else{
-                    cout<<"Detected but too close to an object"<<endl;
-                    //objects[same_index].probability += 10; //We have found the same object, so probability gets higher
-                } 
-            }
-        }
-        for(int q = 0; q < previous_size; q++){
-            if(objects_same[q] == 1){
-                //ADD HERE CODE FOR CHANGING PROBABILITY OF SHAPE------------
-                //WHEN SHAPE IS DETECTED AND NOT UNKNOWN---------------------
-                if(objects[q].probability < 991) objects[q].probability += 5; //We have found the same object, so probability gets higher
-                else objects[q].probability = 1000;
-                if(objects[q].shape[7] = 100){
-                    objects[q].shape[objects_found_temp.array_shape[objects_same_detected[q]]] = 100;
-                } 
-                else if(objects[q].shape[8] != 100){
-                    for(int w = 0; w < 9; w++){
-                        if(w != objects_same_detected[q]){
-                            if(objects[q].shape[w] > 0) objects[q].shape[w] -= 1;
-                        }
-                        else if(objects[q].shape[w] < 100) objects[q].shape[w] += 1;
-                    }
-                }
-            } 
-            else if(objects_same[q] == 0){
-                if(objects[q].probability > 50) objects[q].probability -= 1; //we have not found this object, so prob. gets reduced
-            } 
-        }
-    }
-
-    else{
-        //There are no objects yet, so the first object is created in the vector
-        for(int q = 0;q<objects_found_temp.number_of_objects;q++){
-            if((!std::isnan(objects_found_temp.array_objects_found[q].point.x)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.y)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.z))){
-                float distance_to_beginning = sqrt(pow(objects_found_temp.array_objects_found[q].point.x-0.2,2) + pow(objects_found_temp.array_objects_found[q].point.y-0.2,2));
-                map_object temp_object(objects_found_temp.array_objects_found[q],objects_found_temp.array_colors[q],objects_found_temp.array_shape[q],distance_to_beginning);
-                objects.push_back(temp_object);
-                number_objects += 1;
             }
         }
     }
@@ -312,6 +330,10 @@ void position_callBack(const object_saving::objects_found objects_found){
 }
 void position_classical_callBack(const object_saving::objects_found objects_found){
     analyze_objects(objects_found);
+}
+
+void robot_vel_callBack(const geometry_msgs::Twist robot_vel){
+    current_robot_vel = robot_vel;
 }
 
 void smach_callBack(const bool flag_picked){
@@ -354,6 +376,56 @@ void identification_callBack(const std::string shape_of_object_detected){
     //objects[i].value = value_of_shape;
 }
 
+void objects_to_file(vector<map_object> objects_to_write)
+{
+    ofstream file;
+    file.open("/home/ras14/catkin_ws/src/round1objects.txt");
+    
+    string output = "";  
+    for (int i = 0; i < objects_to_write.size(); i++)
+    {     
+        output += to_string(number_objects) + "\n";
+        //output += "shape#";
+        for(int j = 0; j < objects_to_write[i].shape.size(); j++){
+            output += std::to_string(objects_to_write[i].shape[j]) + ",";
+        }
+        output += "\n";
+        //output += "map_position#";
+        output += std::to_string(objects_to_write[i].map_position.point.x) + ",";
+        output += std::to_string(objects_to_write[i].map_position.point.y) + ",";
+        output += std::to_string(objects_to_write[i].map_position.point.z) + "," + "\n";
+        //output += "color#";
+        output += std::to_string(objects_to_write[i].color) + "\n";
+        //output += "value#";
+        output += std::to_string(objects_to_write[i].value) + "\n";
+        //output += "real_priority_value#";
+        output += std::to_string(objects_to_write[i].real_priority_value) + "\n";
+        //output += "probability#";
+        output += std::to_string(objects_to_write[i].probability) + "\n";
+        //output += "picked#";
+        if(objects_to_write[i].picked){
+            output += std::to_string(1) + "\n";
+        } 
+        else output += std::to_string(0) + "\n";
+
+    }
+    file << output;
+    file.close();
+
+    //cout << output <<endl<<endl<<endl<<endl;
+}
+
+void refresh_objects(){
+
+    ifstream myfile;
+    myfile.open("/home/ras14/catkin_ws/src/round1objects.txt");
+
+    if (myfile.is_open()){
+        //-------------ADD HERE CODE FOR DECODING INFORMATION OF TXT FILE--------------------
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    }
+}
+
 int main(int argc, char **argv)
 {
     // Set up ROS.
@@ -362,19 +434,35 @@ int main(int argc, char **argv)
     ros::Rate r(5);
 
 
-
-    //------HERE ROS SUBSCRIBER TO IDENTIFICATION BY DARKNET_ROS
     //------HERE ROS SUBSCRIBER TO STATE MACHINE FLAG FOR OBJECT PICKED
     ros::Subscriber sub_new_position = n.subscribe("/object_position_map", 1, position_callBack);
     ros::Subscriber sub_new_position_classical = n.subscribe("/object_position_map_classical", 1, position_classical_callBack);
+    ros::Subscriber sub_robot_velocity = n.subscribe("/vel", 1, robot_vel_callBack);
+    
     ros::Publisher objects_pub = n.advertise<object_saving::objects>("objects_detected", 1);
     ros::Publisher best_object_pub =  n.advertise<geometry_msgs::PointStamped>("/best_object", 1);
     ros::Publisher marker_pub = n.advertise<visualization_msgs::MarkerArray>("/all_objects_marker", 1);
     ros::Publisher current_marker_pub = n.advertise<visualization_msgs::MarkerArray>("/current_objects_marker", 1);
 
+    std::ifstream ifile;
+    ifile.open("/home/ras14/catkin_ws/src/round1objects.txt");
+    if ((bool)ifile)
+    {
+        refresh_objects();
+        cout<< "FOUND"<<endl;
+    }
+    else
+    {
+        cout<< "NOT FOUND"<<endl;
+    }
+
+
     while(ros::ok()){
 
         if((objects.size() != 0) && (number_objects != 0)){
+
+            objects_to_file(objects);
+
             visualization_msgs::MarkerArray markers;
             markers.markers.resize(objects.size());
             visualization_msgs::MarkerArray markers_current;
@@ -383,6 +471,7 @@ int main(int argc, char **argv)
             int best_value = 0;
             int best_index;
             for(int i= 0; i< objects.size(); i++){
+                if(objects[i].probability > 50) objects[i].probability -= 1;
                 temp_objects.objects_detected_position.push_back(objects[i].map_position);
                 temp_objects.array_probability.push_back(objects[i].probability);
                 temp_objects.array_real_priority_value.push_back(objects[i].real_priority_value);
@@ -531,7 +620,7 @@ int main(int argc, char **argv)
                 }             
                 markers_current.markers[i].lifetime = ros::Duration(0.25);
             }
-            cout<<"I'm here"<<endl<<endl;
+            //cout<<"I'm here"<<endl<<endl;
             //------HERE CODE TO PUBLISH ARRAY OF OBJECTS INTO RVIZ-------
             marker_pub.publish(markers);
             current_marker_pub.publish(markers_current);
