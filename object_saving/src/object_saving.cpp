@@ -176,7 +176,7 @@ void analyze_objects(object_saving::objects_found objects_found){
     vector<vector<int> > index_conc;
     object_saving::objects_found objects_found_temp = objects_found;
 
-    if(abs(current_robot_vel.angular.z) < 0.2){
+    if(abs(current_robot_vel.angular.z) < 0.1){
 
         //Robustness against same object detected in two bounding boxes
         for(int j = 0; j < objects_found.number_of_objects;j++){
@@ -339,42 +339,44 @@ void robot_vel_callBack(const geometry_msgs::Twist robot_vel){
 void smach_callBack(const bool flag_picked){
     if(flag_picked){
         //-----------HERE CODE FOR CHANGING FLAG OF OBJECT PICKED-------------(
-            int best_value = 0;
+            float best_value = 0.0;
             int best_index;
         for(int i = 0; i < objects.size();i++){
-            if(objects[i].value > best_value){
-                best_value = objects[i].value;
-                best_index = i;
+            if(!objects[i].picked){
+                if(objects[i].real_priority_value > best_value){
+                    best_value = objects[i].real_priority_value;
+                    best_index = i;
+                }
             }
         }
         if(!std::isnan(best_index)) objects[best_index].picked = true;
     }
 }
 
-void identification_callBack(const std::string shape_of_object_detected){
+// void identification_callBack(const std::string shape_of_object_detected){
 
-    //-------- EDIT THIS VALUES FOR THE VALUE OF EACH OBJECT IN THE MAZE
-    int value_of_shape = 1;
-    if(shape_of_object_detected == "Red Cube") value_of_shape = 10;
-    else if(shape_of_object_detected == "Red Hollow Cube") value_of_shape = 10;
-    else if(shape_of_object_detected == "Blue Cube") value_of_shape = 10;
-    else if(shape_of_object_detected == "Green Cube") value_of_shape = 10;
-    else if(shape_of_object_detected == "Yellow Cube") value_of_shape = 10;
-    else if(shape_of_object_detected == "Yellow Ball") value_of_shape = 10;
-    else if(shape_of_object_detected == "Red Ball") value_of_shape = 10;
-    else if(shape_of_object_detected == "Red Cylinder") value_of_shape = 10;
-    else if(shape_of_object_detected == "Green Cylinder") value_of_shape = 10;
-    else if(shape_of_object_detected == " Green Hollow Cube") value_of_shape = 10;
-    else if(shape_of_object_detected == "Blue Triangle") value_of_shape = 10;
-    else if(shape_of_object_detected == "Purple Cross") value_of_shape = 10;
-    else if(shape_of_object_detected == "Purple Star") value_of_shape = 10;
-    else if(shape_of_object_detected == "Orange Cross") value_of_shape = 10;
-    else if(shape_of_object_detected == "Patric") value_of_shape = 10;
+//     //-------- EDIT THIS VALUES FOR THE VALUE OF EACH OBJECT IN THE MAZE
+//     int value_of_shape = 1;
+//     if(shape_of_object_detected == "Red Cube") value_of_shape = 10;
+//     else if(shape_of_object_detected == "Red Hollow Cube") value_of_shape = 10;
+//     else if(shape_of_object_detected == "Blue Cube") value_of_shape = 10;
+//     else if(shape_of_object_detected == "Green Cube") value_of_shape = 10;
+//     else if(shape_of_object_detected == "Yellow Cube") value_of_shape = 10;
+//     else if(shape_of_object_detected == "Yellow Ball") value_of_shape = 10;
+//     else if(shape_of_object_detected == "Red Ball") value_of_shape = 10;
+//     else if(shape_of_object_detected == "Red Cylinder") value_of_shape = 10;
+//     else if(shape_of_object_detected == "Green Cylinder") value_of_shape = 10;
+//     else if(shape_of_object_detected == " Green Hollow Cube") value_of_shape = 10;
+//     else if(shape_of_object_detected == "Blue Triangle") value_of_shape = 10;
+//     else if(shape_of_object_detected == "Purple Cross") value_of_shape = 10;
+//     else if(shape_of_object_detected == "Purple Star") value_of_shape = 10;
+//     else if(shape_of_object_detected == "Orange Cross") value_of_shape = 10;
+//     else if(shape_of_object_detected == "Patric") value_of_shape = 10;
 
-    //-----------HERE THE CODE FOR CHOOSING WHICH OBJECT IS BEING IDENTIFIED----------
-    ///objects[i].shape = shape_of_object_detected;
-    //objects[i].value = value_of_shape;
-}
+//     //-----------HERE THE CODE FOR CHOOSING WHICH OBJECT IS BEING IDENTIFIED----------
+//     ///objects[i].shape = shape_of_object_detected;
+//     //objects[i].value = value_of_shape;
+// }
 
 void objects_to_file(vector<map_object> objects_to_write)
 {
@@ -382,18 +384,19 @@ void objects_to_file(vector<map_object> objects_to_write)
     file.open("/home/ras14/catkin_ws/src/round1objects.txt");
     
     string output = "";  
+    output += to_string(number_objects) + "\n";
     for (int i = 0; i < objects_to_write.size(); i++)
     {     
-        output += to_string(number_objects) + "\n";
         //output += "shape#";
         for(int j = 0; j < objects_to_write[i].shape.size(); j++){
-            output += std::to_string(objects_to_write[i].shape[j]) + ",";
+            if(j != objects_to_write[i].shape.size() - 1) output += std::to_string(objects_to_write[i].shape[j]) + ",";
+            else output += std::to_string(objects_to_write[i].shape[j]);
         }
         output += "\n";
         //output += "map_position#";
         output += std::to_string(objects_to_write[i].map_position.point.x) + ",";
         output += std::to_string(objects_to_write[i].map_position.point.y) + ",";
-        output += std::to_string(objects_to_write[i].map_position.point.z) + "," + "\n";
+        output += std::to_string(objects_to_write[i].map_position.point.z) + "\n";
         //output += "color#";
         output += std::to_string(objects_to_write[i].color) + "\n";
         //output += "value#";
@@ -417,12 +420,71 @@ void objects_to_file(vector<map_object> objects_to_write)
 
 void refresh_objects(){
 
+    string line;
+    int numline = 0;
+    int num_obj_round1;
+    int counter_obj = 0;
     ifstream myfile;
     myfile.open("/home/ras14/catkin_ws/src/round1objects.txt");
-
     if (myfile.is_open()){
-        //-------------ADD HERE CODE FOR DECODING INFORMATION OF TXT FILE--------------------
-        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        while(getline(myfile,line))
+        {  
+            int remainder_numline = numline % 7;
+            if(numline == 0) {
+                num_obj_round1 = stoi(line);
+                objects.reserve(num_obj_round1);
+                numline ++;
+            }
+            else if (remainder_numline == 1){
+                //Array of shape
+                string delimiter = ",";
+                size_t pos = 0;
+                int str_pos = 0;
+                std::string token;
+                while ((pos = line.find(delimiter)) != std::string::npos) {
+                    token = line.substr(0, pos);
+                    objects[counter_obj].shape[str_pos] = stoi(token);
+                    str_pos ++;
+                    line.erase(0, pos + delimiter.length());
+                }
+            }
+            else if (remainder_numline == 2){
+                //Array of position
+                objects[counter_obj].map_position.header.frame_id = "/camera_link";
+                objects[counter_obj].map_position.header.stamp = ros::Time();
+
+                string delimiter = ",";
+                size_t pos = 0;
+                int str_pos = 0;
+                std::string token;
+                while ((pos = line.find(delimiter)) != std::string::npos) {
+                    token = line.substr(0, pos);
+                    if(str_pos == 0) objects[counter_obj].map_position.point.x = stof(token);
+                    else if(str_pos == 1) objects[counter_obj].map_position.point.y = stof(token);
+                    else if(str_pos == 2) objects[counter_obj].map_position.point.z = stof(token);
+                    str_pos ++;
+                    line.erase(0, pos + delimiter.length());
+                }
+            }
+            else if (remainder_numline == 3){
+                objects[counter_obj].color = stoi(line);
+            }
+            else if (remainder_numline == 4){
+                objects[counter_obj].value = stoi(line);
+            }
+            else if (remainder_numline == 5){
+                objects[counter_obj].real_priority_value = stof(line);
+            }
+            else if (remainder_numline == 6){
+                objects[counter_obj].probability = stoi(line);
+            }
+        
+            else if (remainder_numline == 0){
+                objects[counter_obj].picked = false;
+                counter_obj ++;
+            }
+            numline ++;
+        }
     }
 }
 
@@ -444,6 +506,7 @@ int main(int argc, char **argv)
     ros::Publisher marker_pub = n.advertise<visualization_msgs::MarkerArray>("/all_objects_marker", 1);
     ros::Publisher current_marker_pub = n.advertise<visualization_msgs::MarkerArray>("/current_objects_marker", 1);
 
+    //Refresh new objects for round2, if a text with objects, from round1, is detected
     std::ifstream ifile;
     ifile.open("/home/ras14/catkin_ws/src/round1objects.txt");
     if ((bool)ifile)
@@ -456,28 +519,36 @@ int main(int argc, char **argv)
         cout<< "NOT FOUND"<<endl;
     }
 
+    int counter_write_file = 0;
 
     while(ros::ok()){
 
         if((objects.size() != 0) && (number_objects != 0)){
 
-            objects_to_file(objects);
+            if(counter_write_file >= 19){
+                objects_to_file(objects);
+                counter_write_file = 0;
+            }
+            counter_write_file ++;
+            
 
             visualization_msgs::MarkerArray markers;
             markers.markers.resize(objects.size());
             visualization_msgs::MarkerArray markers_current;
             object_saving::objects temp_objects;
             temp_objects.number_of_objects = number_objects;
-            int best_value = 0;
+            float best_value = 0.0;
             int best_index;
             for(int i= 0; i< objects.size(); i++){
                 if(objects[i].probability > 50) objects[i].probability -= 1;
                 temp_objects.objects_detected_position.push_back(objects[i].map_position);
                 temp_objects.array_probability.push_back(objects[i].probability);
                 temp_objects.array_real_priority_value.push_back(objects[i].real_priority_value);
-                if(objects[i].value > best_value){
-                    best_index = i;
-                    best_value = objects[i].value;
+                if(!objects[i].picked){
+                    if(objects[i].real_priority_value > best_value){
+                        best_index = i;
+                        best_value = objects[i].real_priority_value;
+                    }
                 }
 
                 
