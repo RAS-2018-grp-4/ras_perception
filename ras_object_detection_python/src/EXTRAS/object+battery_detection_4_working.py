@@ -108,7 +108,11 @@ Tx_depth = 0.0257
 Ty_depth = 0.001266
 Tz_depth = 0.00372
 
-#Intrinsic camera parameters RGB image
+#Intrinsic camera parameters depth image
+# cy_rgb = 352.49
+# fy_rgb = 672.55
+# cx_rgb = 635.18
+# fx_rgb = 672.55
 cy_rgb = 223.877
 fy_rgb = 614.344
 cx_rgb = 314.850
@@ -142,6 +146,9 @@ def get_world_coord_rgb(bBox,depth_square):
     try:
         y_w = (round(yy+h/2) - cy_rgb) / fy_rgb * z
         x_w = (round(xx+w/2) - cx_rgb) / fx_rgb * z
+        # # APPROXIMATION:
+        # x_w = -x_w
+        # y_w = -y_w
     except:
         pass
         #continue
@@ -229,6 +236,9 @@ def detect_object(image):
     obj_array.array_colors = local_map[:,4].tolist()
     obj_array.array_shape = local_map[:,3].tolist()
 
+    # wait for transform from rgb optical to map frame
+    #listener_rgboptical2map.waitForTransform("camera_rgb_optical_frame", "/map", rospy.Time(0),rospy.Duration(4.0))
+
     for j in range(obj_array.number_of_objects):
         point_rgboptical = PointStamped()
         point_rgboptical.header.frame_id = "camera_rgb_optical_frame"
@@ -288,20 +298,107 @@ def detect_battery(rgb_img, depth_img):
         for j in range(ind_temp.shape[0]):
             largest_contours = contours[ind_temp[j,0]]
         
+            #for k in range(largest_contours.__len__()):
             xx, yy, w, h = cv2.boundingRect(largest_contours)
+            #if detect_color(rgb_img[yy:yy+h,xx:xx+w]==False):
+            # if  cv2.contourArea(largest_contours) < 6000:
+            #     if float(box[2])/box[3] >1.5 or float(box[2])/box[3] < 0.7:     # flat or upright battery?
+            #         cv2.rectangle(rgb_img, (box[0], box[1]), (box[0]+box[2], box[1]+box[3]), (0,0,255), 2)
+            # else:
             cv2.rectangle(rgb_img, (xx, yy), (xx+w, yy+h), (0,0,255), 2)
-
         
-            # Define a square kernel for depth measurement 
-            depth_square = lastFrame.depth_registered[int(-square_size+round(yy+h/2)):int(square_size+round(yy+h/2)),int(-square_size+round(xx+w/2)):int(square_size+round(xx+w/2))]
-            cv2.rectangle(rgb_img, (int(xx+w/2)-square_size, int(yy+h/2)-square_size), (int(xx+w/2)+square_size, int(yy+h/2)+square_size), (255,0,0), 3)
-            try:
-                x_w, y_w, z_w = get_world_coord_rgb([xx, yy, w, h],depth_square)
+            # take a pixel wide strip for each box and find its world coordinates
+            #xx, yy, w, h = box
+            d_temp = depth_img[int(yy+h/2),xx:xx+w]
+            #for k in range(d_temp.shape[0]):
+            k = int(w/2)
+            if(np.isnan(d_temp[k])):
+                pass
+            else:
+                # get the depth at x = xx + k, y = yy + h/2, where:
+                # [xx yy w h] = box
+                #z_w = depth_img[xx:xx+k, yy:round(yy+h/2)]
+                z_w = d_temp[k] - Tz_depth
+                z_w = z_w
+                # use intrinsic camera parameters to convert from pixel coordinate to 
+                # world coordinate (http://docs.ros.org/kinetic/api/sensor_msgs/html/msg/CameraInfo.html)
 
-                #point_depthoptical = PoseStamped()
+                # Define a square kernel for depth measurement 
+                depth_square = lastFrame.depth_registered[int(-square_size+round(yy+h/2)):int(square_size+round(yy+h/2)),int(-square_size+round(xx+w/2)):int(square_size+round(xx+w/2))]
+                cv2.rectangle(rgb_img, (int(xx+w/2)-square_size, int(yy+h/2)-square_size), (int(xx+w/2)+square_size, int(yy+h/2)+square_size), (255,0,0), 3)
+                try:
+                    # y_w = (round(yy+h/2) - cy_depth) / fy_depth * z_w - Tx_depth
+                    # x_w = (round(xx+k) - cx_depth) / fx_depth * z_w - Ty_depth
+
+                    # # APPROXIMATION:
+                    # x_w = -x_w
+                    # y_w = -y_w
+                     
+                    # x_w = (xx - cx_depth*z_w - Tx_depth)/fx_depth
+                    # y_w = (yy - cy_depth*z_w - Ty_depth)/fy_depth 
+                    x_w, y_w, z_w = get_world_coord_rgb([xx, yy, w, h],depth_square)
+
+                    #point_depthoptical = PoseStamped()
+                    point_depthoptical = Pose()
+                    #point_depthoptical.header.frame_id = "camera_depth_optical_frame"
+                    
+                    '''Below lines applicable if we use PoseStamped()'''
+                    #point_temp.header.stamp = rospy.Time.now()
+                    #point_depthoptical.header.frame_id = depth_img.header.frame_id
+                    #point_depthoptical.header.stamp = rospy.Time.now()
+                    # point_depthoptical.pose.position.x = x_w
+                    # point_depthoptical.pose.position.y = y_w
+                    # point_depthoptical.pose.position.z = z_w
+
+                    # point_depthoptical.pose.orientation.x = 0.0
+                    # point_depthoptical.pose.orientation.y = 0.0
+                    # point_depthoptical.pose.orientation.z = 0.0
+                    # point_depthoptical.pose.orientation.w = 1.0
+                    point_depthoptical.position.x = x_w
+                    point_depthoptical.position.y = y_w
+                    point_depthoptical.position.z = z_w
+
+                    point_depthoptical.orientation.x = 0.0
+                    point_depthoptical.orientation.y = 0.0
+                    point_depthoptical.orientation.z = 0.0
+                    point_depthoptical.orientation.w = 1.0
+                    battery_pos_array.poses.append(point_depthoptical)
+                except:
+                    pass
+
+
+        # Threshold HSV range for BLACK color
+        mask = threshold_hsv(rgb_img, 7)
+        # Morphological opening
+        mask_morph = morphOpen(mask)
+
+        # find contours
+        _, contours, _ = cv2.findContours(mask_morph, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contour_sizes = [(cv2.contourArea(contour)>20000) for contour in contours]
+        ind_temp = np.argwhere(contour_sizes)
+        
+        for k in range(ind_temp.shape[0]):
+            largest_contours = contours[ind_temp[k,0]]
+            #print(cv2.contourArea(largest_contours))
+            box = cv2.boundingRect(largest_contours)
+            xx, yy, w, h = box
+            cv2.rectangle(rgb_img, (xx, yy), (xx+w, yy+h), (0,255,0), 2)
+            
+            # Define a square kernel for depth measurement
+            depth_square = lastFrame.depth[int(yy+h):int(2*square_size+(yy+h)),int(-square_size+round(xx+w/2)):int(square_size+round(xx+w/2))]
+            cv2.rectangle(rgb_img, (int(xx+w/2), yy+h), (int(xx+w/2)+2*square_size, yy+h+2*square_size), (255,0,0), 3)
+            try:
+                x_w, y_w, z_w = get_world_coord_rgb(box, depth_square)
+                #get_blackface_depth(box)
+
+                # append to battery array
                 point_depthoptical = Pose()
-                #point_depthoptical.header.frame_id = "camera_depth_optical_frame"
-                
+                ##### BELOW LINE IS AN APPROXIMATION! Actual frame is rgb optical x(
+                #point_depthoptical.header.frame_id = 'camera_depth_optical_frame'
+                # For this to be valid, we could just add 3 cm to x_w
+                #x_w = x_w - 0.03
+
+                #point_temp.header.stamp = rospy.Time.now()
                 point_depthoptical.position.x = x_w
                 point_depthoptical.position.y = y_w
                 point_depthoptical.position.z = z_w
@@ -313,51 +410,6 @@ def detect_battery(rgb_img, depth_img):
                 battery_pos_array.poses.append(point_depthoptical)
             except:
                 pass
-
-
-        # # Threshold HSV range for BLACK color
-        # mask = threshold_hsv(rgb_img, 7)
-        # # Morphological opening
-        # mask_morph = morphOpen(mask)
-
-        # # find contours
-        # _, contours, _ = cv2.findContours(mask_morph, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        # contour_sizes = [(cv2.contourArea(contour)>20000) for contour in contours]
-        # ind_temp = np.argwhere(contour_sizes)
-        
-        # for k in range(ind_temp.shape[0]):
-        #     largest_contours = contours[ind_temp[k,0]]
-        #     #print(cv2.contourArea(largest_contours))
-        #     box = cv2.boundingRect(largest_contours)
-        #     xx, yy, w, h = box
-        #     cv2.rectangle(rgb_img, (xx, yy), (xx+w, yy+h), (0,255,0), 2)
-            
-        #     # Define a square kernel for depth measurement
-        #     depth_square = lastFrame.depth[int(yy+h):int(2*square_size+(yy+h)),int(-square_size+round(xx+w/2)):int(square_size+round(xx+w/2))]
-        #     cv2.rectangle(rgb_img, (int(xx+w/2), yy+h), (int(xx+w/2)+2*square_size, yy+h+2*square_size), (255,0,0), 3)
-        #     try:
-        #         x_w, y_w, z_w = get_world_coord_rgb(box, depth_square)
-        #         #get_blackface_depth(box)
-
-        #         # append to battery array
-        #         point_depthoptical = Pose()
-        #         ##### BELOW LINE IS AN APPROXIMATION! Actual frame is rgb optical x(
-        #         #point_depthoptical.header.frame_id = 'camera_depth_optical_frame'
-        #         # For this to be valid, we could just add 3 cm to x_w
-        #         #x_w = x_w - 0.03
-
-        #         #point_temp.header.stamp = rospy.Time.now()
-        #         point_depthoptical.position.x = x_w
-        #         point_depthoptical.position.y = y_w
-        #         point_depthoptical.position.z = z_w
-
-        #         point_depthoptical.orientation.x = 0.0
-        #         point_depthoptical.orientation.y = 0.0
-        #         point_depthoptical.orientation.z = 0.0
-        #         point_depthoptical.orientation.w = 1.0
-        #         battery_pos_array.poses.append(point_depthoptical)
-        #     except:
-        #         pass
     # print('got here')  
     cv2.imshow('detected battery or wall',rgb_img)
     cv2.waitKey(2)
@@ -370,23 +422,29 @@ def detect_battery(rgb_img, depth_img):
 
 #call back function to store image in class object 
 def callback_storage_image(image_message):
+    #print('trace 2')
     bridge = CvBridge()
     global lastFrame
     lastFrame.image = bridge.imgmsg_to_cv2(image_message, desired_encoding="passthrough")
+    #lastFrame.image = cv2.cvtColor(lastFrame.image, cv2.COLOR_BGR2RGB)
     lastFrame.flagImage = True
 
 
 #call back function to store depth in class object
 def callback_depth(image_message):
+    #print('trace 3')
     bridge = CvBridge()
     global lastFrame
     lastFrame.depth = bridge.imgmsg_to_cv2(image_message, desired_encoding="32FC1")
+    #print(lastFrame.depth)
     lastFrame.flagDepth = True
 
 def callback_depth_registered(image_message):
+    #print('trace 3')
     bridge = CvBridge()
     global lastFrame
     lastFrame.depth_registered = bridge.imgmsg_to_cv2(image_message, desired_encoding="32FC1")
+    #print(lastFrame.depth)
     lastFrame.flagDepth_Registered = True
 
 # MAIN FUNCTION
@@ -397,6 +455,7 @@ def main():
     processedImage = rospy.Publisher("/processedImage", Image, queue_size=10)
     # Publisher for objects found
     obj_pub = rospy.Publisher("/object_position_cam_link", objects_found, queue_size=1)
+    #obj_pub = rospy.Publisher("/object_position_map", objects_found, queue_size=1)
     # Publisher for detected batteries
     #pub_battery_detection = rospy.Publisher('/battery_detection', std_msgs.msg.Bool, queue_size=1)
     pub_battery_position = rospy.Publisher('/battery_position_cam_link', PoseArray, queue_size=1)

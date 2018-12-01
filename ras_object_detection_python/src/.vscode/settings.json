@@ -4,6 +4,9 @@
         "/opt/ros/kinetic/lib/python2.7/dist-packages"
     ],
     "files.associations": {
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "iosfwd": "cpp",
+        "fstream": "cpp",
+        "iostream": "cpp"
     }
 }
