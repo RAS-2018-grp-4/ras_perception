@@ -17,6 +17,14 @@
 
 using namespace std;
 
+//Global variables needed for this node
+int number_objects;
+geometry_msgs::Twist current_robot_vel;
+
+//Global int parameters of the values of the objects
+int ncolors = 6;
+vector< vector<int> > values_objects(ncolors);
+
 class map_object{
 
     public:
@@ -28,6 +36,7 @@ class map_object{
     int color;
     int value;
     float real_priority_value;
+    float distance;
     int probability;
     bool picked;
 
@@ -45,6 +54,7 @@ map_object::map_object(void){
     color = 0;
     probability = 50;
     value = 1;
+    distance = 100.0;
     picked = false;
 }
 
@@ -60,11 +70,11 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
             }
             else if(this_shape == 0){ //It is a yellow ball
                 temp_shape[this_shape] = 100;
-                value = 5;
+                value = values_objects[0][0];
             }
             else{ //It is a yellow cube
                 temp_shape[this_shape] = 100;
-                value = 10;
+                value = values_objects[0][1];
             }
             shape = temp_shape;
             break;
@@ -72,15 +82,15 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
             switch(this_shape){
                 case 1: //It is a green cube
                     temp_shape[this_shape] = 100;
-                    value = 30;
+                    value = values_objects[1][1];
                     break;
                 case 2: //It is a green cylinder
                     temp_shape[this_shape] = 100;
-                    value = 40;
+                    value = values_objects[1][2];
                     break;
                 case 3: //It is a green hollow cube
                     temp_shape[this_shape] = 100;
-                    value = 50;
+                    value = values_objects[1][3];
                     break;
                 default: //The identified shape is not possible
                     temp_shape[7] = 100;
@@ -92,11 +102,11 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
             switch(this_shape){
                 case 4: //It is a orange cross
                     temp_shape[this_shape] = 100;
-                    value = 100;
+                    value = values_objects[2][4];
                     break;
                 case 6: //It is Patric!!
                     temp_shape[this_shape] = 100;
-                    value = 1000;
+                    value = values_objects[2][6];
                     break;
                 default: //The identified shape is not possible
                     temp_shape[7] = 100;
@@ -108,15 +118,15 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
             switch(this_shape){
                 case 2: //It is a red cylinder
                     temp_shape[this_shape] = 100;
-                    value = 30;
+                    value = values_objects[3][2];
                     break;
                 case 3: //It is a red hollow cube
                     temp_shape[this_shape] = 100;
-                    value = 130;
+                    value = values_objects[3][3];
                     break;
                 case 0: //It is a red ball
                     temp_shape[this_shape] = 100;
-                    value = 15;
+                    value = values_objects[3][0];
                     break;
                 default: //The identified shape is not possible
                     temp_shape[7] = 100;
@@ -127,11 +137,11 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
         case 4: //the object is blue
             switch(this_shape){
                 case 1: //It is a blue cube
-                    temp_shape[this_shape] = 100;
+                    temp_shape[this_shape] = values_objects[4][1];
                     value = 60;
                     break;
                 case 5: //It is a blue triangle
-                    temp_shape[this_shape] = 100;
+                    temp_shape[this_shape] = values_objects[4][5];
                     value = 70;
                     break;
 
@@ -145,11 +155,11 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
             switch(this_shape){
                 case 4: //It is a purple cross
                     temp_shape[this_shape] = 100;
-                    value = 120;
+                    value = values_objects[5][4];
                     break;
                 case 6: //It is a purple star
                     temp_shape[this_shape] = 100;
-                    value = 200;
+                    value = values_objects[5][6];
                     break;
 
                 default: //The identified shape is not possible
@@ -161,16 +171,14 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
   
     }
     shape = temp_shape;
+    distance = this_distance;
     real_priority_value = (float)value / (2*this_distance);
     picked = false;
     probability = 50;
     map_position = position;
 }
 
-//Global variables needed for this node
 std::vector<map_object> objects;
-int number_objects;
-geometry_msgs::Twist current_robot_vel;
 
 void analyze_objects(object_saving::objects_found objects_found){
     vector<vector<int> > index_conc;
@@ -290,14 +298,24 @@ void analyze_objects(object_saving::objects_found objects_found){
                     if(objects[q].shape[7] == 100){
                         objects[q].shape[objects_found_temp.array_shape[objects_same_detected[q]]] = 100;
                         objects[q].shape[7] = 0;
+                        objects[q].value = values_objects[objects[q].color][objects_found_temp.array_shape[objects_same_detected[q]]];
+                        objects[q].real_priority_value = objects[q].value / objects[q].distance;
                     } 
                     else if(objects[q].shape[8] != 100){
+                        int best_shape = 0;
+                        int best_shape_index = 7;
                         for(int w = 0; w < 9; w++){
                             if(w != objects_found_temp.array_shape[objects_same_detected[q]]){
                                 if(objects[q].shape[w] > 0) objects[q].shape[w] -= 1;
                             }
                             else if(objects[q].shape[w] < 100) objects[q].shape[objects_found_temp.array_shape[objects_same_detected[q]]] += 1;
+                            if(objects[q].shape[w] > best_shape){
+                                best_shape = objects[q].shape[w];
+                                best_shape_index = w;
+                            }
                         }
+                        objects[q].value = values_objects[objects[q].color][best_shape_index];
+                        objects[q].real_priority_value = objects[q].value / objects[q].distance;
                     }
                 } 
                 else if(objects_same[q] == 0){
@@ -336,21 +354,21 @@ void robot_vel_callBack(const geometry_msgs::Twist robot_vel){
     current_robot_vel = robot_vel;
 }
 
-void smach_callBack(const bool flag_picked){
-    if(flag_picked){
-        //-----------HERE CODE FOR CHANGING FLAG OF OBJECT PICKED-------------(
-            float best_value = 0.0;
-            int best_index;
-        for(int i = 0; i < objects.size();i++){
-            if(!objects[i].picked){
-                if(objects[i].real_priority_value > best_value){
-                    best_value = objects[i].real_priority_value;
-                    best_index = i;
-                }
+void gripped_callBack(const std_msgs::String flag_gripped){
+    
+    //-----------HERE CODE FOR CHANGING FLAG OF OBJECT PICKED-------------(
+    float best_value = 0.0;
+    int best_index;
+    for(int i = 0; i < objects.size();i++){
+        if(!objects[i].picked){
+            if(objects[i].real_priority_value > best_value){
+                best_value = objects[i].real_priority_value;
+                best_index = i;
             }
         }
-        if(!std::isnan(best_index)) objects[best_index].picked = true;
     }
+    if(!std::isnan(best_index)) objects[best_index].picked = true;
+
 }
 
 // void identification_callBack(const std::string shape_of_object_detected){
@@ -465,7 +483,7 @@ void refresh_objects(){
                     token = line.substr(0, pos);
                     if(str_pos == 0) objects_round1.map_position.point.x = stof(token);
                     else if(str_pos == 1) objects_round1.map_position.point.y = stof(token);
-                    else if(str_pos == 2) objects_round1.map_position.point.z = 0.0;
+                    else if(str_pos == 2) objects_round1.map_position.point.z = 0.01;
                     str_pos ++;
                     line.erase(0, pos + delimiter.length());
                 }
@@ -505,8 +523,11 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
     ros::Rate r(5);
 
+    for( int i = 0 ; i < ncolors ; i++ ){
+        values_objects[i].resize(9);
+    }
 
-    //------HERE ROS SUBSCRIBER TO STATE MACHINE FLAG FOR OBJECT PICKED
+    ros::Subscriber sub_gripped = n.subscribe("/flag_gripped", 1, gripped_callBack);
     ros::Subscriber sub_new_position = n.subscribe("/object_position_map", 1, position_callBack);
     ros::Subscriber sub_new_position_classical = n.subscribe("/object_position_map_classical", 1, position_classical_callBack);
     ros::Subscriber sub_robot_velocity = n.subscribe("/vel", 1, robot_vel_callBack);
@@ -519,8 +540,25 @@ int main(int argc, char **argv)
     int counter_write_file = 0;
     int counter_read_file = 1;
     bool tried_to_read_file = false;
+    bool tried_to_get_values = false;
+
 
     while(ros::ok()){
+
+        //Obtain the parameters of the values of the objects
+        if(!tried_to_get_values) {
+            if(n.hasParam("/value_object_0_0")){
+                //If it detects one parameter, all of them should be OK
+                string str_param;
+                for(int i = 0; i < ncolors; i++){
+                    for(int j = 0;j < 9; j++){
+                        str_param = "/value_object_" + to_string(i) + "_" + to_string(j);
+                        if(n.hasParam(str_param)) n.getParam(str_param, values_objects[i][j]);
+                    }
+                }
+                tried_to_get_values = true;
+            }
+        }
 
         if (counter_read_file >= 60){
             std::ifstream ifile;
@@ -587,7 +625,7 @@ int main(int argc, char **argv)
                     // Set the pose of the markers[i].  This is a full 6DOF pose relative to the frame/time specified in the header
                     markers.markers[i].pose.position.x = objects[i].map_position.point.x;
                     markers.markers[i].pose.position.y = objects[i].map_position.point.y;
-                    markers.markers[i].pose.position.z = objects[i].map_position.point.z;
+                    markers.markers[i].pose.position.z = 0.01;
                     markers.markers[i].pose.orientation.x = 0.0;
                     markers.markers[i].pose.orientation.y = 0.0;
                     markers.markers[i].pose.orientation.z = 0.0;
@@ -662,7 +700,7 @@ int main(int argc, char **argv)
                     // Set the pose of the markers[i].  This is a full 6DOF pose relative to the frame/time specified in the header
                     markers_current.markers[i].pose.position.x = objects_current[i].map_position.point.x;
                     markers_current.markers[i].pose.position.y = objects_current[i].map_position.point.y;
-                    markers_current.markers[i].pose.position.z = objects_current[i].map_position.point.z;
+                    markers_current.markers[i].pose.position.z = 0.01;
                     markers_current.markers[i].pose.orientation.x = 0.0;
                     markers_current.markers[i].pose.orientation.y = 0.0;
                     markers_current.markers[i].pose.orientation.z = 0.0;
