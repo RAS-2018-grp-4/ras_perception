@@ -67,7 +67,7 @@ def main():
  
     r = rospy.Rate(10) # Hz
     #begin our 'infinite' while loop
-    while(1):
+    while(not rospy.is_shutdown()):
         global lastFrame
         processFrame = copy.deepcopy(lastFrame)
         if processFrame.flagImage == True:

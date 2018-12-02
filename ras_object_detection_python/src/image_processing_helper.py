@@ -34,23 +34,23 @@ def threshold_hsv(image, color_label):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
     if color_label == 0:    #YELLOW
-        mask = cv2.inRange(hsv, np.array([17,128,90]), np.array([32,255,255]))
+        mask = cv2.inRange(hsv, np.array([0,1102,138]), np.array([179,255,255]))
     elif color_label == 1:  #GREEN
-        mask = cv2.inRange(hsv, np.array([32,50,0]), np.array([66,255,255]))
+        mask = cv2.inRange(hsv, np.array([32,46,0]), np.array([76,255,255]))
     elif color_label == 2:  #ORANGE
         # mask1 = cv2.inRange(hsv, np.array([5,150,150]), np.array([15,255,255]))
         # mask2 = cv2.inRange(hsv, np.array([160,220,150]), np.array([169,255,255]))
         # mask = mask1 + mask2 
-        mask = cv2.inRange(hsv, np.array([5,150,150]), np.array([15,255,255]))
+        mask = cv2.inRange(hsv, np.array([8,0,0]), np.array([20,255,255]))
     elif color_label == 3:  #RED
-        mask1 = cv2.inRange(hsv, np.array([0,130,120]), np.array([8,255,255]))
-        mask2 = cv2.inRange(hsv, np.array([170,130,200]), np.array([179,255,255]))
+        mask1 = cv2.inRange(hsv, np.array([0,0,0]), np.array([15,255,255]))
+        mask2 = cv2.inRange(hsv, np.array([170,0,0]), np.array([179,255,255]))
         mask = mask1 + mask2 
         #mask = cv2.inRange(hsv, np.array([0,150,0]), np.array([4,255,200]))
     elif color_label == 4:  #BLUE
-        mask = cv2.inRange(hsv, np.array([70,0,0]), np.array([120,255,255]))
+        mask = cv2.inRange(hsv, np.array([70,0,0]), np.array([170,255,255]))
     elif color_label == 5:  #PURPLE
-        mask = cv2.inRange(hsv, np.array([28,0,50]), np.array([179,166,170]))
+        mask = cv2.inRange(hsv, np.array([26,0,63]), np.array([179,163,154]))
     elif color_label == 7:  #BLACK
         mask = cv2.inRange(hsv, np.array([0,0,0]), np.array([179,255,50]))
 

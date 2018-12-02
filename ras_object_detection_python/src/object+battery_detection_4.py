@@ -47,7 +47,7 @@ from image_processing_helper import *
 
 # imports for ROS integration
 import rospy
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CompressedImage
 from cv_bridge import CvBridge, CvBridgeError
 import time
 import copy
@@ -231,7 +231,8 @@ def detect_object(image):
 
     for j in range(obj_array.number_of_objects):
         point_rgboptical = PointStamped()
-        point_rgboptical.header.frame_id = "camera_rgb_optical_frame"
+        #point_rgboptical.header.frame_id = "camera_rgb_optical_frame"
+        point_rgboptical.header.frame_id = "/camera_link"
 
         #point_temp.header.stamp = rospy.Time.now()
         point_rgboptical.point.x = local_map[j,0]
@@ -253,7 +254,7 @@ def draw_result(box, image, bbox_col, pred_shape_label= None, pred_color_label=N
     else:
         '''Both shape and color on bounding box'''
         cv2.putText(image, color_class[pred_color_label]+ ' ' +shape_class[pred_shape_label], (box[0]-15,box[1]-20), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
-        cv2.putText(image,  str(round(-z,3))+" m", (box[0]+15,box[1]+15), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(image,  str(round(z,3))+" m", (box[0]+15,box[1]+15), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
     '''only color on bounding box'''
 #     cv2.putText(image, color_class[np.argmax(pred_color)], (box[0],box[1]-15), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0), 2,
 # cv2.LINE_AA)
@@ -298,19 +299,21 @@ def detect_battery(rgb_img, depth_img):
             try:
                 x_w, y_w, z_w = get_world_coord_rgb([xx, yy, w, h],depth_square)
 
-                #point_depthoptical = PoseStamped()
-                point_depthoptical = Pose()
-                #point_depthoptical.header.frame_id = "camera_depth_optical_frame"
-                
-                point_depthoptical.position.x = x_w
-                point_depthoptical.position.y = y_w
-                point_depthoptical.position.z = z_w
+                if z_w <= 0.4:
 
-                point_depthoptical.orientation.x = 0.0
-                point_depthoptical.orientation.y = 0.0
-                point_depthoptical.orientation.z = 0.0
-                point_depthoptical.orientation.w = 1.0
-                battery_pos_array.poses.append(point_depthoptical)
+                    #point_depthoptical = PoseStamped()
+                    point_depthoptical = Pose()
+                    #point_depthoptical.header.frame_id = "camera_depth_optical_frame"
+                    
+                    point_depthoptical.position.x = x_w
+                    point_depthoptical.position.y = y_w
+                    point_depthoptical.position.z = z_w
+
+                    point_depthoptical.orientation.x = 0.0
+                    point_depthoptical.orientation.y = 0.0
+                    point_depthoptical.orientation.z = 0.0
+                    point_depthoptical.orientation.w = 1.0
+                    battery_pos_array.poses.append(point_depthoptical)
             except:
                 pass
 
@@ -359,11 +362,11 @@ def detect_battery(rgb_img, depth_img):
         #     except:
         #         pass
     # print('got here')  
-    cv2.imshow('detected battery or wall',rgb_img)
-    cv2.waitKey(2)
+    #cv2.imshow('detected battery or wall',rgb_img)
+    #cv2.waitKey(2)
 
-    cv2.imshow('sobel',sobely_thresh)
-    cv2.waitKey(2)
+    #cv2.imshow('sobel',sobely_thresh)
+    ##cv2.waitKey(2)
     
     return battery_pos_array
     
@@ -373,7 +376,12 @@ def callback_storage_image(image_message):
     bridge = CvBridge()
     global lastFrame
     lastFrame.image = bridge.imgmsg_to_cv2(image_message, desired_encoding="passthrough")
+    # Image to numpy array
+    #np_arr = np.fromstring(image_message.data, np.uint8)
+    # Decode to cv2 image and store
+    #lastFrame.image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
     lastFrame.flagImage = True
+    
 
 
 #call back function to store depth in class object
@@ -402,7 +410,7 @@ def main():
     pub_battery_position = rospy.Publisher('/battery_position_cam_link', PoseArray, queue_size=1)
 
 
-    # Subscriber to RGB image
+    # Subscriber to RGB image: ADD /compressed, CompressedImage Image type
     rospy.Subscriber('/camera/rgb/image_rect_color', Image, callback_storage_image)
     # Subscriber to depth_registered image
     rospy.Subscriber("/camera/depth_registered/sw_registered/image_rect", Image, callback_depth_registered)

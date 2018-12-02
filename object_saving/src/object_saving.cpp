@@ -687,7 +687,7 @@ int main(int argc, char **argv)
         if(speak_objects_round1){
             speak_objects_round1 = false;
             std_msgs::String str_espeak;
-            str_espeak.data = 'Found objects from round 1';
+            str_espeak.data = "Found objects from round 1";
             espeak_pub.publish(str_espeak);
         }
 
