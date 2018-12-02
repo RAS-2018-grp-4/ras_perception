@@ -184,6 +184,7 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
 }
 
 std::vector<map_object> objects;
+vector<geometry_msgs::PointStamped> pos_best_objects_gripped; 
 
 void get_object_to_speak(int color, int shape){
     switch(color){
@@ -471,7 +472,12 @@ void gripped_callBack(const std_msgs::String flag_gripped){
             }
         }
     }
-    if(!std::isnan(best_index)) objects[best_index].picked = true;
+    if(!std::isnan(best_index)){
+        objects[best_index].picked = true;
+        geometry_msgs::PointStamped pos_best_temp;
+        pos_best_temp = objects[best_index].map_position;
+        pos_best_objects_gripped.push_back(pos_best_temp);
+    } 
 
 }
 
@@ -720,9 +726,18 @@ int main(int argc, char **argv)
                     temp_objects.array_probability.push_back(objects[i].probability);
                     temp_objects.array_real_priority_value.push_back(objects[i].real_priority_value);
                     if(!objects[i].picked){
-                        if(objects[i].real_priority_value > best_value){
-                            best_index = i;
-                            best_value = objects[i].real_priority_value;
+                        bool okay_dist = true;
+                        for(int j = 0; j < pos_best_objects_gripped.size; j++){
+                            if(sqrt(pow(pos_best_objects_gripped[j].point.x - objects[i].map_position.point.x,2) + pow(pos_best_objects_gripped[j].point.y - objects[i].map_position.point.y,2)) < 0.2){
+                                okay_dist = false;
+                            }
+                        }
+
+                        if(okay_dist){
+                            if(objects[i].real_priority_value > best_value){
+                                best_index = i;
+                                best_value = objects[i].real_priority_value;
+                            }
                         }
                     }
 
