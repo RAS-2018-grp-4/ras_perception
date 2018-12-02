@@ -25,6 +25,11 @@ geometry_msgs::Twist current_robot_vel;
 int ncolors = 6;
 vector< vector<int> > values_objects(ncolors);
 
+//Global flags for speaking
+bool speak_objects_round1 = false;
+bool speak_object_detected = false;
+std_msgs::String what_to_speak;
+
 class map_object{
 
     public:
@@ -33,7 +38,7 @@ class map_object{
     vector<int> shape; // 0: Ball, 1: Cube, 2: Cylinder, 3: Hollow cube, 4: Cross
                        // 5: Triangle, 6: Star, 7: Nothing, 8: Obstacle!!!
     geometry_msgs::PointStamped map_position;
-    int color;
+    int color; //0: yellow, 1: 
     int value;
     float real_priority_value;
     float distance;
@@ -180,6 +185,97 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
 
 std::vector<map_object> objects;
 
+void get_object_to_speak(int color, int shape){
+    switch(color){
+        case 0:
+        //It's yellow
+            switch(shape){
+                case 0:
+                    what_to_speak.data = "Found a yellow ball";
+                    break;
+                case 1:
+                    what_to_speak.data = "Found a yellow cube";
+                    break;
+                default:
+                    break;
+            }
+            break;
+        case 1:
+        //It's green
+            switch(shape){
+                case 1:
+                    what_to_speak.data = "Found a green cube";
+                    break;
+                case 2:
+                    what_to_speak.data = "Found a green cylinder";
+                    break;
+                case 3:
+                    what_to_speak.data = "Found a green hollow cube";
+                    break;
+                default:
+                    break;
+            }
+            break;
+        case 2:
+        //It's orange
+            switch(shape){
+                case 4:
+                    what_to_speak.data = "Found a orange cross";
+                    break;
+                case 6:
+                    what_to_speak.data = "Found Patric";
+                    break;
+                default:
+                    break;
+            }
+            break;
+        case 3:
+        //It's red
+            switch(shape){
+                case 2:
+                    what_to_speak.data = "Found a red cylinder";
+                    break;
+                case 3:
+                    what_to_speak.data = "Found a red hollow cube";
+                    break;
+                case 0:
+                    what_to_speak.data = "Found a red ball";
+                    break;
+                default:
+                    break;
+            }
+            break;
+        case 4:
+        //It's blue
+            switch(shape){
+                case 1:
+                    what_to_speak.data = "Found a blue cube";
+                    break;
+                case 5:
+                    what_to_speak.data = "Found a blue triangle";
+                    break;
+                default:
+                    break;
+            }
+            break;
+        case 5:
+        //It's purple
+            switch(shape){
+                case 4:
+                    what_to_speak.data = "Found a purple cross";
+                    break;
+                case 6:
+                    what_to_speak.data = "Found a purple star";
+                    break;
+                default:
+                    break;
+            }
+            break;
+
+    }
+
+}
+
 void analyze_objects(object_saving::objects_found objects_found){
     vector<vector<int> > index_conc;
     object_saving::objects_found objects_found_temp = objects_found;
@@ -279,6 +375,8 @@ void analyze_objects(object_saving::objects_found objects_found){
                     if(temp_counter == objects.size()){
                         float distance_to_beginning = sqrt(pow(objects_found_temp.array_objects_found[q].point.x-0.2,2) + pow(objects_found_temp.array_objects_found[q].point.y-0.2,2));
                         map_object temp_object(objects_found_temp.array_objects_found[q],objects_found_temp.array_colors[q],objects_found_temp.array_shape[q],distance_to_beginning);
+                        get_object_to_speak(temp_object.color, objects_found_temp.array_shape[q]);
+                        speak_object_detected = true;
                         objects.push_back(temp_object);
                         number_objects += 1;
                         cout<<"Found a new object"<<endl;
@@ -339,6 +437,8 @@ void analyze_objects(object_saving::objects_found objects_found){
                 if((!std::isnan(objects_found_temp.array_objects_found[q].point.x)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.y)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.z))){
                     float distance_to_beginning = sqrt(pow(objects_found_temp.array_objects_found[q].point.x-0.2,2) + pow(objects_found_temp.array_objects_found[q].point.y-0.2,2));
                     map_object temp_object(objects_found_temp.array_objects_found[q],objects_found_temp.array_colors[q],objects_found_temp.array_shape[q],distance_to_beginning);
+                    get_object_to_speak(temp_object.color, objects_found_temp.array_shape[q]);
+                    speak_object_detected = true;
                     objects.push_back(temp_object);
                     number_objects += 1;
                 }
@@ -511,6 +611,7 @@ void refresh_objects(){
             else if (remainder_numline == 0){
                 //cout<<line<<endl<<endl;
                 objects_round1.picked = false;
+                speak_objects_round1 = true;
                 objects.push_back(objects_round1);
                 counter_obj ++;
             }
@@ -581,6 +682,19 @@ int main(int argc, char **argv)
             counter_read_file = 0;
         }
         if(counter_read_file != 0) counter_read_file++;
+
+        //Speak if there were objects from Round 1
+        if(speak_objects_round1){
+            speak_objects_round1 = false;
+            std_msgs::String str_espeak;
+            str_espeak.data = 'Found objects from round 1';
+            espeak_pub.publish(str_espeak);
+        }
+
+        if(speak_object_detected){
+            espeak_pub.publish(what_to_speak);
+            speak_object_detected = false;
+        }
         if(tried_to_read_file == true){
             //if((objects.size() != 0) && (number_objects != 0)){
             if(objects.size() != 0){
