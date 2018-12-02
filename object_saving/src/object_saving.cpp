@@ -725,9 +725,10 @@ int main(int argc, char **argv)
                     temp_objects.objects_detected_position.push_back(objects[i].map_position);
                     temp_objects.array_probability.push_back(objects[i].probability);
                     temp_objects.array_real_priority_value.push_back(objects[i].real_priority_value);
+                    temp_objects.array_color.push_back(objects[i].color);
                     if(!objects[i].picked){
                         bool okay_dist = true;
-                        for(int j = 0; j < pos_best_objects_gripped.size; j++){
+                        for(int j = 0; j < pos_best_objects_gripped.size(); j++){
                             if(sqrt(pow(pos_best_objects_gripped[j].point.x - objects[i].map_position.point.x,2) + pow(pos_best_objects_gripped[j].point.y - objects[i].map_position.point.y,2)) < 0.2){
                                 okay_dist = false;
                             }
