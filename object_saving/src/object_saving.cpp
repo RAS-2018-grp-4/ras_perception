@@ -282,6 +282,10 @@ void analyze_objects(object_saving::objects_found objects_found){
                         objects.push_back(temp_object);
                         number_objects += 1;
                         cout<<"Found a new object"<<endl;
+
+                        //Speak having found a new object
+                        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        //espeak_pub.publish();
                     }
                     else{
                         cout<<"Detected but too close to an object"<<endl;
@@ -532,6 +536,7 @@ int main(int argc, char **argv)
     ros::Subscriber sub_new_position_classical = n.subscribe("/object_position_map_classical", 1, position_classical_callBack);
     ros::Subscriber sub_robot_velocity = n.subscribe("/vel", 1, robot_vel_callBack);
     
+    ros::Publisher espeak_pub = n.advertise<std_msgs::String>("/espeak/string", 1);
     ros::Publisher objects_pub = n.advertise<object_saving::objects>("objects_detected", 1);
     ros::Publisher best_object_pub =  n.advertise<geometry_msgs::PointStamped>("/best_object", 1);
     ros::Publisher marker_pub = n.advertise<visualization_msgs::MarkerArray>("/all_objects_marker", 1);
