@@ -44,6 +44,7 @@ class map_object{
     float distance;
     int probability;
     bool picked;
+    int times_detected;
 
     map_object();
     map_object(geometry_msgs::PointStamped, int, int,float);
@@ -61,6 +62,7 @@ map_object::map_object(void){
     value = 1;
     distance = 100.0;
     picked = false;
+    times_detected = 0;
 }
 
 //Constructor overloaded with known position, color and shape
@@ -74,11 +76,11 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
                 value = 1;
             }
             else if(this_shape == 0){ //It is a yellow ball
-                temp_shape[this_shape] = 100;
+                temp_shape[this_shape] = 1;
                 value = values_objects[0][0];
             }
             else{ //It is a yellow cube
-                temp_shape[this_shape] = 100;
+                temp_shape[this_shape] = 1;
                 value = values_objects[0][1];
             }
             shape = temp_shape;
@@ -86,15 +88,15 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
         case 1: //the object is green
             switch(this_shape){
                 case 1: //It is a green cube
-                    temp_shape[this_shape] = 100;
+                    temp_shape[this_shape] = 1;
                     value = values_objects[1][1];
                     break;
                 case 2: //It is a green cylinder
-                    temp_shape[this_shape] = 100;
+                    temp_shape[this_shape] = 1;
                     value = values_objects[1][2];
                     break;
                 case 3: //It is a green hollow cube
-                    temp_shape[this_shape] = 100;
+                    temp_shape[this_shape] = 1;
                     value = values_objects[1][3];
                     break;
                 default: //The identified shape is not possible
@@ -106,11 +108,11 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
         case 2: //the object is orange
             switch(this_shape){
                 case 4: //It is a orange cross
-                    temp_shape[this_shape] = 100;
+                    temp_shape[this_shape] = 1;
                     value = values_objects[2][4];
                     break;
                 case 6: //It is Patric!!
-                    temp_shape[this_shape] = 100;
+                    temp_shape[this_shape] = 1;
                     value = values_objects[2][6];
                     break;
                 default: //The identified shape is not possible
@@ -122,15 +124,15 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
         case 3: //the object is red
             switch(this_shape){
                 case 2: //It is a red cylinder
-                    temp_shape[this_shape] = 100;
+                    temp_shape[this_shape] = 1;
                     value = values_objects[3][2];
                     break;
                 case 3: //It is a red hollow cube
-                    temp_shape[this_shape] = 100;
+                    temp_shape[this_shape] = 1;
                     value = values_objects[3][3];
                     break;
                 case 0: //It is a red ball
-                    temp_shape[this_shape] = 100;
+                    temp_shape[this_shape] = 1;
                     value = values_objects[3][0];
                     break;
                 default: //The identified shape is not possible
@@ -142,12 +144,12 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
         case 4: //the object is blue
             switch(this_shape){
                 case 1: //It is a blue cube
-                    temp_shape[this_shape] = values_objects[4][1];
-                    value = 60;
+                    temp_shape[this_shape] = 1;
+                    value = values_objects[4][1];
                     break;
                 case 5: //It is a blue triangle
-                    temp_shape[this_shape] = values_objects[4][5];
-                    value = 70;
+                    temp_shape[this_shape] = 1;
+                    value = values_objects[4][5];
                     break;
 
                 default: //The identified shape is not possible
@@ -159,11 +161,11 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
         case 5: //the object is purple
             switch(this_shape){
                 case 4: //It is a purple cross
-                    temp_shape[this_shape] = 100;
+                    temp_shape[this_shape] = 1;
                     value = values_objects[5][4];
                     break;
                 case 6: //It is a purple star
-                    temp_shape[this_shape] = 100;
+                    temp_shape[this_shape] = 1;
                     value = values_objects[5][6];
                     break;
 
@@ -179,6 +181,7 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
     distance = this_distance;
     real_priority_value = (float)value / (2*this_distance);
     picked = false;
+    times_detected = 1;
     probability = 50;
     map_position = position;
 }
@@ -374,10 +377,11 @@ void analyze_objects(object_saving::objects_found objects_found){
                         }
                     }
                     if(temp_counter == objects.size()){
+                        //New object has been identified. It gets updated in the objects vector
                         float distance_to_beginning = sqrt(pow(objects_found_temp.array_objects_found[q].point.x-0.2,2) + pow(objects_found_temp.array_objects_found[q].point.y-0.2,2));
                         map_object temp_object(objects_found_temp.array_objects_found[q],objects_found_temp.array_colors[q],objects_found_temp.array_shape[q],distance_to_beginning);
-                        get_object_to_speak(temp_object.color, objects_found_temp.array_shape[q]);
-                        speak_object_detected = true;
+                        //get_object_to_speak(temp_object.color, objects_found_temp.array_shape[q]);
+                        //speak_object_detected = true;
                         objects.push_back(temp_object);
                         number_objects += 1;
                         cout<<"Found a new object"<<endl;
@@ -394,31 +398,43 @@ void analyze_objects(object_saving::objects_found objects_found){
             }
             for(int q = 0; q < previous_size; q++){
                 if(objects_same[q] == 1){
-                    //ADD HERE CODE FOR CHANGING PROBABILITY OF SHAPE------------
-                    //WHEN SHAPE IS DETECTED AND NOT UNKNOWN---------------------
+
                     if(objects[q].probability < 991) objects[q].probability += 5; //We have found the same object, so probability gets higher
                     else objects[q].probability = 1000;
                     if(objects[q].shape[7] == 100){
-                        objects[q].shape[objects_found_temp.array_shape[objects_same_detected[q]]] = 100;
+                        objects[q].shape[objects_found_temp.array_shape[objects_same_detected[q]]] = 1;
                         objects[q].shape[7] = 0;
+                        objects[q].times_detected = 1;
                         objects[q].value = values_objects[objects[q].color][objects_found_temp.array_shape[objects_same_detected[q]]];
-                        objects[q].real_priority_value = objects[q].value / objects[q].distance;
+                        objects[q].real_priority_value = (objects[q].value / objects[q].distance)*pow(objects[q].times_detected, 0.33);
+
+                        
                     } 
                     else if(objects[q].shape[8] != 100){
                         int best_shape = 0;
                         int best_shape_index = 7;
+                        int number_shape_identified = 0;
                         for(int w = 0; w < 9; w++){
-                            if(w != objects_found_temp.array_shape[objects_same_detected[q]]){
-                                if(objects[q].shape[w] > 0) objects[q].shape[w] -= 1;
-                            }
-                            else if(objects[q].shape[w] < 100) objects[q].shape[objects_found_temp.array_shape[objects_same_detected[q]]] += 1;
+                            // if(w != objects_found_temp.array_shape[objects_same_detected[q]]){
+                            //     if(objects[q].shape[w] > 0) objects[q].shape[w] -= 1;
+                            // }
+                            if(w == objects_found_temp.array_shape[objects_same_detected[q]]) objects[q].shape[objects_found_temp.array_shape[objects_same_detected[q]]] += 1;
+                            
                             if(objects[q].shape[w] > best_shape){
                                 best_shape = objects[q].shape[w];
                                 best_shape_index = w;
                             }
+                            number_shape_identified += objects[q].shape[w];
                         }
+                        //Update value (& real priority value) if shape changes
                         objects[q].value = values_objects[objects[q].color][best_shape_index];
-                        objects[q].real_priority_value = objects[q].value / objects[q].distance;
+                        objects[q].real_priority_value = (objects[q].value / objects[q].distance)*pow(objects[q].times_detected, 0.33);
+                        objects[q].times_detected += 1;
+                        if(number_shape_identified >= 5){
+                            //Object has been identified 5 times already. The speaker says the object
+                            get_object_to_speak(objects[q].color, best_shape_index);
+                            speak_object_detected = true;
+                        }
                     }
                 } 
                 else if(objects_same[q] == 0){
@@ -438,8 +454,8 @@ void analyze_objects(object_saving::objects_found objects_found){
                 if((!std::isnan(objects_found_temp.array_objects_found[q].point.x)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.y)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.z))){
                     float distance_to_beginning = sqrt(pow(objects_found_temp.array_objects_found[q].point.x-0.2,2) + pow(objects_found_temp.array_objects_found[q].point.y-0.2,2));
                     map_object temp_object(objects_found_temp.array_objects_found[q],objects_found_temp.array_colors[q],objects_found_temp.array_shape[q],distance_to_beginning);
-                    get_object_to_speak(temp_object.color, objects_found_temp.array_shape[q]);
-                    speak_object_detected = true;
+                    //get_object_to_speak(temp_object.color, objects_found_temp.array_shape[q]);
+                    //speak_object_detected = true;
                     objects.push_back(temp_object);
                     number_objects += 1;
                 }
@@ -809,6 +825,43 @@ int main(int argc, char **argv)
                     
                 }
 
+                //Publish best object in RViz
+                visualization_msgs::Marker best_marker;
+                best_marker.header.frame_id = "/map";
+                best_marker.header.stamp = ros::Time::now();
+
+                // Set the namespace and id for this markers[i].  This serves to create a unique ID
+                // Any markers[i] sent with the same namespace and id will overwrite the old one
+                best_marker.ns = "best_object";
+                best_marker.id = objects.size();
+
+                // Set the markers[i] type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+                best_marker.type = visualization_msgs::Marker::SPHERE;
+
+                // Set the markers[i] action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+                best_marker.action = visualization_msgs::Marker::ADD;
+
+                // Set the pose of the markers[i].  This is a full 6DOF pose relative to the frame/time specified in the header
+                best_marker.pose.position.x = objects[best_index].map_position.point.x;
+                best_marker.pose.position.y = objects[best_index].map_position.point.y;
+                best_marker.pose.position.z = 0.01;
+                best_marker.pose.orientation.x = 0.0;
+                best_marker.pose.orientation.y = 0.0;
+                best_marker.pose.orientation.z = 0.0;
+                best_marker.pose.orientation.w = 1.0;
+
+                // Set the scale of the marker -- 1x1x1 here means 1m on a side
+                best_marker.scale.x = 0.05;
+                best_marker.scale.y = 0.05;
+                best_marker.scale.z = 0.05;
+
+                // Set the color -- be sure to set alpha to something non-zero!
+                best_marker.color.a = 1.0;
+                best_marker.color.r = 1.0f;
+                best_marker.color.g = 0.78f;
+                best_marker.color.b = 0.82f;
+                best_marker.lifetime = ros::Duration(0.25);
+
                 vector<map_object> objects_current;
                 for(int i = 0; i < objects.size();i++){
                     if(objects[i].probability > 50){
@@ -824,7 +877,7 @@ int main(int argc, char **argv)
                     // Set the namespace and id for this markers[i].  This serves to create a unique ID
                     // Any markers[i] sent with the same namespace and id will overwrite the old one
                     markers_current.markers[i].ns = "detected current objects";
-                    markers_current.markers[i].id = i + objects.size();
+                    markers_current.markers[i].id = i + objects.size() + 1;
 
                     // Set the markers[i] type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
                     markers_current.markers[i].type = visualization_msgs::Marker::CUBE;
@@ -882,6 +935,8 @@ int main(int argc, char **argv)
                     }             
                     markers_current.markers[i].lifetime = ros::Duration(0.25);
                 }
+
+
                 //cout<<"I'm here"<<endl<<endl;
                 //------HERE CODE TO PUBLISH ARRAY OF OBJECTS INTO RVIZ-------
                 marker_pub.publish(markers);
