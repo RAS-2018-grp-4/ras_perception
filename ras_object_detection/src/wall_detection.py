@@ -31,6 +31,7 @@ class Wall_Detection:
         self.map_angle = 90
         self.max_mapping_distance = 2 * self.distance_threshold
         self.flag_no_obstacle = False
+        self.flag_disable = False
     #####################################################
     #             Initialize ROS Parameter              #
     #####################################################
@@ -39,13 +40,23 @@ class Wall_Detection:
         self.pub_wall_detection = rospy.Publisher('/wall_detection', std_msgs.msg.Bool, queue_size=1)
         self.pub_wall_position = rospy.Publisher('/wall_position', PoseArray, queue_size=1)
         self.pub_vel = rospy.Publisher('/keyboard/vel', Twist, queue_size=1)
-
+        
         rospy.Subscriber('/scan', sensor_msgs.msg.LaserScan, self.callback_laser)
+        rospy.Subscriber('/wall_disable', std_msgs.msg.String, self.callback_disable)
 
         self.rate = rospy.Rate(10)
         self.listenser = tf.TransformListener()
+        self.flag_disable = False
         
-
+    #####################################################
+    #                 Disable_Callback                  #
+    #####################################################
+    def callback_disable(self,msg):
+        if msg.data == "disable":
+            self.flag_disable = True
+        elif msg.data == "able"
+            self.flag_disable = False
+        
     #####################################################
     #                   Laser_Callback                  #
     #####################################################
@@ -60,9 +71,10 @@ class Wall_Detection:
                         rospy.loginfo('Detect Wall')
 
                         # publish message
-                        self.msg.data = True
-                        self.pub_wall_detection.publish(self.msg)
-                        rospy.loginfo('Send Stop Message')
+                        if not self.flag_disable:
+                            self.msg.data = True
+                            self.pub_wall_detection.publish(self.msg)
+                            rospy.loginfo('Send Stop Message')
 
                         break
                 else:
@@ -97,8 +109,8 @@ class Wall_Detection:
                     wall_position_array.poses.append(somepose)
                 else:
                     pass
-
-            self.pub_wall_position.publish(wall_position_array)
+            if not self.flag_disable:
+                self.pub_wall_position.publish(wall_position_array)
             self.remaining_mapping_times = self.remaining_mapping_times - 1 
 
             if self.remaining_mapping_times == 0:
