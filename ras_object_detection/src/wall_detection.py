@@ -31,6 +31,7 @@ class Wall_Detection:
         self.map_angle = 90
         self.max_mapping_distance = 2 * self.distance_threshold
         self.flag_no_obstacle = False
+        self.flag_disable = False
     #####################################################
     #             Initialize ROS Parameter              #
     #####################################################
@@ -50,8 +51,11 @@ class Wall_Detection:
     #####################################################
     #                 Disable_Callback                  #
     #####################################################
-    def callback_laser(self,scan):
-        
+    def callback_disable(self,msg):
+        if msg.data == "disable":
+            self.flag_disable = True
+        elif msg.data == "able"
+            self.flag_disable = False
         
     #####################################################
     #                   Laser_Callback                  #
@@ -67,9 +71,10 @@ class Wall_Detection:
                         rospy.loginfo('Detect Wall')
 
                         # publish message
-                        self.msg.data = True
-                        self.pub_wall_detection.publish(self.msg)
-                        rospy.loginfo('Send Stop Message')
+                        if not self.flag_disable:
+                            self.msg.data = True
+                            self.pub_wall_detection.publish(self.msg)
+                            rospy.loginfo('Send Stop Message')
 
                         break
                 else:
@@ -104,8 +109,8 @@ class Wall_Detection:
                     wall_position_array.poses.append(somepose)
                 else:
                     pass
-
-            self.pub_wall_position.publish(wall_position_array)
+            if not self.flag_disable:
+                self.pub_wall_position.publish(wall_position_array)
             self.remaining_mapping_times = self.remaining_mapping_times - 1 
 
             if self.remaining_mapping_times == 0:
