@@ -771,7 +771,6 @@ int main(int argc, char **argv)
                 object_saving::objects temp_objects;
                 temp_objects.number_of_objects = number_objects;
                 float best_value = 0.0;
-                int best_index;
                 for(int i= 0; i< objects.size(); i++){
                     if(objects[i].probability > 50) objects[i].probability -= 1;
                     temp_objects.objects_detected_position.push_back(objects[i].map_position);
@@ -789,7 +788,7 @@ int main(int argc, char **argv)
 
                         if(okay_dist){
                             if(objects[i].real_priority_value > best_value){
-                                best_index = i;
+                                best_object_index = i;
                                 best_value = objects[i].real_priority_value;
                             }
                         }
@@ -879,8 +878,8 @@ int main(int argc, char **argv)
                 best_marker.action = visualization_msgs::Marker::ADD;
 
                 // Set the pose of the markers[i].  This is a full 6DOF pose relative to the frame/time specified in the header
-                best_marker.pose.position.x = objects[best_index].map_position.point.x;
-                best_marker.pose.position.y = objects[best_index].map_position.point.y;
+                best_marker.pose.position.x = objects[best_object_index].map_position.point.x;
+                best_marker.pose.position.y = objects[best_object_index].map_position.point.y;
                 best_marker.pose.position.z = 0.01;
                 best_marker.pose.orientation.x = 0.0;
                 best_marker.pose.orientation.y = 0.0;
@@ -980,7 +979,7 @@ int main(int argc, char **argv)
                 current_marker_pub.publish(markers_current);
                 best_marker_pub.publish(best_marker);
                 objects_pub.publish(temp_objects);
-                best_object_pub.publish(objects[best_index].map_position);
+                best_object_pub.publish(objects[best_object_index].map_position);
 
                 if(flag_best_object_pub){
                     flag_best_object_pub = false;
