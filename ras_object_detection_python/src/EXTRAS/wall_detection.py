@@ -18,7 +18,7 @@ class Wall_Detection:
     #              Initialize Object                    #
     #####################################################
     def __init__(self):
-        self.distance_threshold = 0.3
+        self.distance_threshold = 0.2
         self.wall_position = geometry_msgs.msg.PointStamped()
         self.msg = std_msgs.msg.Bool()
         self.msg.data = False                          # detect wall or noy

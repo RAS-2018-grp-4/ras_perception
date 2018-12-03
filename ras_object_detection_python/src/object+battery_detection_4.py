@@ -20,7 +20,6 @@ Class Labels:   SHAPE
 5:  Triangle
 6:  Star
 7:  Nothing
-8:  Obstacle
 ########################################
 
 model_color: A CNN which detects color
@@ -35,7 +34,7 @@ Class Labels:   COLOR
 5:  Purple
 6:  Nothing
 and...
-7:  Black (for batteries)
+7:  Black (for batteries) ## IGNORE FOR NOW
 '''
 import cv2
 import numpy as np 
@@ -67,22 +66,17 @@ class Frame:
         self.flagDepth_Registered = False
         
 lastFrame = Frame()
-# class Detector():
-#     def __init__(self):
-#         # create a global object of Frame
-#         self.lastFrame = Frame()
 
-#json_file = open('../../DL_training/KERAS_model/saved_models/cropped_shape_1.json', 'r')
-json_file = open('/home/ras14/catkin_ws/src/ras_perception/DL_training/KERAS_model/saved_models/cropped_shape_1.json', 'r')
+# Load SHAPE CNN
+json_file = open('/home/ras14/catkin_ws/src/ras_perception/DL_training/KERAS_model/saved_models/cropped_shape_2.json', 'r')
 loaded_model_json = json_file.read()
 json_file.close()
 model_shape = model_from_json(loaded_model_json)
-# model_shape.load_weights('../../DL_training/KERAS_model/saved_models/cropped_shape_1.h5')
-model_shape.load_weights('/home/ras14/catkin_ws/src/ras_perception/DL_training/KERAS_model/saved_models/cropped_shape_1.h5')
-#model_shape = keras.models.load_model('./saved_models/keras_RAS_model_shape_1.h5')
-# model_color = keras.models.load_model('../../DL_training/KERAS_model//saved_models/keras_cropped_color_1.h5')
+model_shape.load_weights('/home/ras14/catkin_ws/src/ras_perception/DL_training/KERAS_model/saved_models/cropped_shape_2.h5')
+# Load COLOR CNN
 model_color = keras.models.load_model('/home/ras14/catkin_ws/src/ras_perception/DL_training/KERAS_model/saved_models/keras_cropped_color_1.h5')
 
+# Define classes for color and shape
 shape_class = ['Ball', 'Cube', 'Cylinder', 'Hollow Cube', 'Cross', 'Triangle', 'Star', 'Nothing' ]
 color_class = ['Yellow', 'Green', 'Orange', 'Red', 'Blue', 'Purple', 'Nothing']
 
@@ -94,12 +88,13 @@ N_COLORS = 6
 
 DEBUG = 0
 
-std = 58.363087
-mean = 85.69786
+# Mean and variance in training dataset (for data normalization)
+std = 57.384      #58.363087
+mean = 88.282     #85.69786
 
 expansion_param = 0.25
 
-#Intrinsic camera parameters rgb image
+#Intrinsic camera parameters depth image
 cy_depth = 245.811
 fy_depth = 472.631
 cx_depth = 316.227
@@ -117,6 +112,38 @@ fx_rgb = 616.344
 # Size of square kernel of pixels for robust depth measure
 square_size = 5
 
+# ARRAY OF VALID OBJECTS
+VALID_OBJECT = np.zeros((N_SHAPES, N_COLORS))
+
+'''
+                    Yellow    Green   Orange    Red     Blue    Purple
+                         0       1       2       3       4       5
+                 ----------------------------------------------------
+    Ball        0|       1       0       0       1       0       0
+    Cube        1|       1       1       0       0       1       0
+    Cylinder    2|       0       1       0       1       0       0
+    Hollow Cube 3|       0       1       0       1       0       0
+    Cross       4|       0       0       1       0       0       1
+    Triangle    5|       0       0       0       0       1       0
+    Star        6|       0       0       1       0       0       1       
+'''
+VALID_OBJECT[0][0]=1    # Ball Yellow
+VALID_OBJECT[0][3]=1    # Ball Red    
+VALID_OBJECT[1][0]=1    # Cube Yellow
+VALID_OBJECT[1][1]=1    # Cube Green
+VALID_OBJECT[1][4]=1    # Cube Blue
+VALID_OBJECT[2][1]=1    # Cylinder Green
+VALID_OBJECT[2][3]=1    # Cylinder Red
+VALID_OBJECT[3][1]=1    # Hollow cube green
+VALID_OBJECT[3][3]=1    # Hollow cube red
+VALID_OBJECT[4][2]=1    # Cross Orange
+VALID_OBJECT[4][5]=1    # Cross Purple
+VALID_OBJECT[5][4]=1    # Triangle Blue
+VALID_OBJECT[6][2]=1    # Star Orange
+VALID_OBJECT[6][5]=1    # Star Purple
+
+
+'''Use intrinsic camera parameters to calculate world coordinate from pixel coordinate'''
 #def get_world_coord_rgb(bBox):
 def get_world_coord_rgb(bBox,depth_square):
     xx = bBox[0]
@@ -148,7 +175,7 @@ def get_world_coord_rgb(bBox,depth_square):
     return x_w, y_w, z
 
 
-
+'''Function to detect objects from RGB image'''
 def detect_object(image):
     # Parameters for local map
     object_x = []
@@ -170,7 +197,7 @@ def detect_object(image):
         
         for k in range(ind_temp.shape[0]):
             largest_contours = contours[ind_temp[k,0]]
-        
+            
             xx, yy, w, h = cv2.boundingRect(largest_contours)
 
             if float(h)/w > 0.8 and float(h)/w<1.2:
@@ -199,28 +226,33 @@ def detect_object(image):
                         pred_shape_label = np.argmax(pred_shape)
                         
                         if pred_shape_label != 7:    #NOTHING shape
-                            # Get world coordinates of detected object from depth image 
-                            bBox_temp = [xx, yy, w, h]
-                            # Define a square kernel for depth measurement 
-                            depth_square = lastFrame.depth_registered[int(-square_size+round(yy+h/2)):int(square_size+round(yy+h/2)),int(-square_size+round(xx+w/2)):int(square_size+round(xx+w/2))]
+                            '''CHECK IF COMBINED SHAPE + COLOR LABEL IS A VALID COMBINATION'''
+                            if VALID_OBJECT[pred_shape_label][pred_color_label]==1:
+                                #print(cv2.contourArea(largest_contours))
+                                # Get world coordinates of detected object from depth image 
+                                bBox_temp = [xx, yy, w, h]
+                                # Define a square kernel for depth measurement 
+                                depth_square = lastFrame.depth_registered[int(-square_size+round(yy+h/2)):int(square_size+round(yy+h/2)),int(-square_size+round(xx+w/2)):int(square_size+round(xx+w/2))]
 
-                            #if bBox_temp !=None:
-                            try:
-                                # get the depth of center of detected bbox
-                                #x_w, y_w, z_w = get_world_coord_rgb(bBox_temp)                                
-                                x_w, y_w, z_w = get_world_coord_rgb(bBox_temp,depth_square)
+                                #if bBox_temp !=None:
+                                try:
+                                    # get the depth of center of detected bbox
+                                    #x_w, y_w, z_w = get_world_coord_rgb(bBox_temp)                                
+                                    x_w, y_w, z_w = get_world_coord_rgb(bBox_temp,depth_square)
 
-                                draw_result([xx,yy,w,h], image, (0,255,0), pred_shape_label, pred_color_label, z_w)
-                                draw_result([roi_x,roi_y, roi_w, roi_h], image, (255,0,0)) 
-
-                                object_x.append(x_w)
-                                object_y.append(y_w)
-                                object_z.append(z_w)
-                                object_shape.append(pred_shape_label)
-                                object_color.append(pred_color_label)
-                            except:
-                                pass
-                                #print('wierd error!')
+                                    draw_result([xx,yy,w,h], image, (0,255,0), pred_shape_label, pred_color_label, z_w)
+                                    draw_result([roi_x,roi_y, roi_w, roi_h], image, (255,0,0)) 
+                                    
+                                    '''DISTANCE THRESHOLD FOR OBJECT DETECTION'''
+                                    if z_w <= 0.4:
+                                        object_x.append(x_w)
+                                        object_y.append(y_w)
+                                        object_z.append(z_w)
+                                        object_shape.append(pred_shape_label)
+                                        object_color.append(pred_color_label)
+                                except:
+                                    pass
+                                    #print('wierd error!')
     
     local_map = np.array((object_x, object_y, object_z, object_shape, object_color)).T
 
@@ -245,6 +277,7 @@ def detect_object(image):
     return obj_array
 
 
+'''Helper function to draw rectangle and put text on rgb image'''
 #def draw_result(box, image, pred_shape, pred_color):
 def draw_result(box, image, bbox_col, pred_shape_label= None, pred_color_label=None, z=None):
     cv2.rectangle(image, (box[0], box[1]), (box[0]+box[2], box[1]+box[3]), bbox_col, 2)
@@ -264,8 +297,11 @@ def draw_result(box, image, bbox_col, pred_shape_label= None, pred_color_label=N
 
 
 
-
-
+'''Function to detect BATTERY from depth image and show it on RGB image
+Depth is taken from non rectified image, but info is superimposed to 
+rect depth image. this allows us to ignore stupid transforms from depth 
+frame to map frame
+'''
 def detect_battery(rgb_img, depth_img):
     battery_pos_array = PoseArray()
     # take image gradient along y 
@@ -284,40 +320,61 @@ def detect_battery(rgb_img, depth_img):
     _, contours, _ = cv2.findContours(sobely_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
     if contours != []:
-        contour_sizes = [(cv2.contourArea(contour)>6000) for contour in contours]
+        contour_sizes = [(cv2.contourArea(contour)>8000) for contour in contours]
         ind_temp = np.argwhere(contour_sizes)
         for j in range(ind_temp.shape[0]):
             largest_contours = contours[ind_temp[j,0]]
         
             xx, yy, w, h = cv2.boundingRect(largest_contours)
-            cv2.rectangle(rgb_img, (xx, yy), (xx+w, yy+h), (0,0,255), 2)
 
-        
-            # Define a square kernel for depth measurement 
-            depth_square = lastFrame.depth_registered[int(-square_size+round(yy+h/2)):int(square_size+round(yy+h/2)),int(-square_size+round(xx+w/2)):int(square_size+round(xx+w/2))]
-            cv2.rectangle(rgb_img, (int(xx+w/2)-square_size, int(yy+h/2)-square_size), (int(xx+w/2)+square_size, int(yy+h/2)+square_size), (255,0,0), 3)
-            try:
-                x_w, y_w, z_w = get_world_coord_rgb([xx, yy, w, h],depth_square)
+            # print(float(h)/w)
+            # print(cv2.contourArea(largest_contours))
+                                
+            
+            # check color of bounding box, if it's not a color then its a battery!
+            # roi_img = rgb_img[yy:yy+h, xx:xx+w]
+            # input_img = []
+            # input_img.append(cv2.resize(roi_img, (32,32)))
+            # input_img = np.array(input_img)
 
-                if z_w <= 0.4:
+            # # Normalize data
+            # input_img = input_img.astype('float32')
+            # input_img = (input_img-mean)/(std+1e-7)
 
-                    #point_depthoptical = PoseStamped()
-                    point_depthoptical = Pose()
-                    #point_depthoptical.header.frame_id = "camera_depth_optical_frame"
-                    
-                    point_depthoptical.position.x = x_w
-                    point_depthoptical.position.y = y_w
-                    point_depthoptical.position.z = z_w
+            # pred_color = model_color.predict(input_img)
+            # pred_color_label = np.argmax(pred_color)
 
-                    point_depthoptical.orientation.x = 0.0
-                    point_depthoptical.orientation.y = 0.0
-                    point_depthoptical.orientation.z = 0.0
-                    point_depthoptical.orientation.w = 1.0
-                    battery_pos_array.poses.append(point_depthoptical)
-            except:
-                pass
+            # if pred_color_label == 6:   #NOTHING color
+            
+            if float(h)/w >0.4:
+                cv2.rectangle(rgb_img, (xx, yy), (xx+w, yy+h), (0,0,255), 2)
+            
+                # Define a square kernel for depth measurement 
+                depth_square = lastFrame.depth_registered[int(-square_size+round(yy+h/2)):int(square_size+round(yy+h/2)),int(-square_size+round(xx+w/2)):int(square_size+round(xx+w/2))]
+                cv2.rectangle(rgb_img, (int(xx+w/2)-square_size, int(yy+h/2)-square_size), (int(xx+w/2)+square_size, int(yy+h/2)+square_size), (255,0,0), 3)
+                try:
+                    x_w, y_w, z_w = get_world_coord_rgb([xx, yy, w, h],depth_square)
+
+                    '''DISTANCE THRESHOLD FOR BATTERY DETECTION'''
+                    if z_w <= 0.4:
+                        #point_depthoptical = PoseStamped()
+                        point_depthoptical = Pose()
+                        #point_depthoptical.header.frame_id = "camera_depth_optical_frame"
+                        
+                        point_depthoptical.position.x = x_w
+                        point_depthoptical.position.y = y_w
+                        point_depthoptical.position.z = z_w
+
+                        point_depthoptical.orientation.x = 0.0
+                        point_depthoptical.orientation.y = 0.0
+                        point_depthoptical.orientation.z = 0.0
+                        point_depthoptical.orientation.w = 1.0
+                        battery_pos_array.poses.append(point_depthoptical)
+                except:
+                    pass
 
 
+        '''CODE FOR BLACK PART OF BATTERY'''
         # # Threshold HSV range for BLACK color
         # mask = threshold_hsv(rgb_img, 7)
         # # Morphological opening
@@ -361,13 +418,15 @@ def detect_battery(rgb_img, depth_img):
         #         battery_pos_array.poses.append(point_depthoptical)
         #     except:
         #         pass
-    # print('got here')  
-    #cv2.imshow('detected battery or wall',rgb_img)
-    #cv2.waitKey(2)
+    # print('got here') 
 
-    #cv2.imshow('sobel',sobely_thresh)
-    ##cv2.waitKey(2)
-    
+    # SHOW BATTERY IMAGES 
+    # cv2.imshow('detected battery or wall',rgb_img)
+    # cv2.waitKey(2)
+
+    # cv2.imshow('sobel',sobely_thresh)
+    # cv2.waitKey(2)
+
     return battery_pos_array
     
 
@@ -403,6 +462,8 @@ def main():
     
     # Publisher for processed image
     processedImage = rospy.Publisher("/processedImage", Image, queue_size=10)
+    # Publisher for processed image
+    batteryImage = rospy.Publisher("/batteryImage", Image, queue_size=10)
     # Publisher for objects found
     obj_pub = rospy.Publisher("/object_position_cam_link", objects_found, queue_size=1)
     # Publisher for detected batteries
@@ -461,6 +522,9 @@ def main():
             Q: Should robot stop when it sees a battery?
             '''
             pub_battery_position.publish(battery_pos_array)
+            
+            # Publish detected battery in an image
+            batteryImage.publish(CvBridge().cv2_to_imgmsg(frame))
 
         r.sleep()
 
