@@ -45,6 +45,7 @@ class map_object{
     int probability;
     bool picked;
     int times_detected;
+    bool object_spoken;
 
     map_object();
     map_object(geometry_msgs::PointStamped, int, int,float);
@@ -63,6 +64,7 @@ map_object::map_object(void){
     distance = 100.0;
     picked = false;
     times_detected = 0;
+    object_spoken = false;
 }
 
 //Constructor overloaded with known position, color and shape
@@ -184,6 +186,7 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
     times_detected = 1;
     probability = 50;
     map_position = position;
+    object_spoken = false;
 }
 
 std::vector<map_object> objects;
@@ -432,8 +435,12 @@ void analyze_objects(object_saving::objects_found objects_found){
                         objects[q].times_detected += 1;
                         if(number_shape_identified >= 5){
                             //Object has been identified 5 times already. The speaker says the object
-                            get_object_to_speak(objects[q].color, best_shape_index);
-                            speak_object_detected = true;
+                            if(!objects[q].object_spoken){
+                                get_object_to_speak(objects[q].color, best_shape_index);
+                                objects[q].object_spoken = true;
+                                speak_object_detected = true;
+                            }
+                            
                         }
                     }
                 } 
