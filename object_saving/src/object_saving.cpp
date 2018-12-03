@@ -287,7 +287,7 @@ void analyze_objects(object_saving::objects_found objects_found){
     vector<vector<int> > index_conc;
     object_saving::objects_found objects_found_temp = objects_found;
 
-    if(abs(current_robot_vel.angular.z) < 0.1){
+    if(abs(current_robot_vel.angular.z) < 0.25){
 
         //Robustness against same object detected in two bounding boxes
         for(int j = 0; j < objects_found.number_of_objects;j++){
@@ -409,7 +409,7 @@ void analyze_objects(object_saving::objects_found objects_found){
                         objects[q].shape[7] = 0;
                         objects[q].times_detected = 1;
                         objects[q].value = values_objects[objects[q].color][objects_found_temp.array_shape[objects_same_detected[q]]];
-                        objects[q].real_priority_value = (objects[q].value / objects[q].distance)*pow(objects[q].times_detected, 0.33);
+                        objects[q].real_priority_value = (objects[q].value / objects[q].distance)*pow(objects[q].times_detected, 0.2);
 
                         
                     } 
@@ -552,6 +552,8 @@ void objects_to_file(vector<map_object> objects_to_write)
         output += std::to_string(objects_to_write[i].color) + "\n";
         //output += "value#";
         output += std::to_string(objects_to_write[i].value) + "\n";
+        //output += "times_detected#";
+        output += std::to_string(objects_to_write[i].times_detected) + "\n";
         //output += "real_priority_value#";
         output += std::to_string(objects_to_write[i].real_priority_value) + "\n";
         //output += "probability#";
@@ -582,7 +584,7 @@ void refresh_objects(){
         cout<<endl<<"FILE OF OBJECTS DETECTED. WE ARE IN ROUND 2"<<endl<<endl;
         while(getline(myfile,line))
         {  
-            int remainder_numline = numline % 7;
+            int remainder_numline = numline % 8;
             if(numline == 0) {
                 num_obj_round1 = stoi(line);
                 //cout<<line<<endl;
@@ -631,9 +633,13 @@ void refresh_objects(){
             }
             else if (remainder_numline == 5){
                 //cout<<line<<endl;
-                objects_round1.real_priority_value = stof(line);
+                objects_round1.times_detected = stoi(line);
             }
             else if (remainder_numline == 6){
+                //cout<<line<<endl;
+                objects_round1.real_priority_value = stof(line);
+            }
+            else if (remainder_numline == 7){
                 //cout<<line<<endl;
                 objects_round1.probability = stoi(line);
             }
@@ -655,7 +661,7 @@ int main(int argc, char **argv)
     // Set up ROS.
     ros::init(argc, argv, "object_saving");
     ros::NodeHandle n;
-    ros::Rate r(5);
+    ros::Rate r(10);
 
     for( int i = 0 ; i < ncolors ; i++ ){
         values_objects[i].resize(9);
@@ -750,6 +756,7 @@ int main(int argc, char **argv)
                     temp_objects.array_probability.push_back(objects[i].probability);
                     temp_objects.array_real_priority_value.push_back(objects[i].real_priority_value);
                     temp_objects.array_color.push_back(objects[i].color);
+                    temp_objects.array_times_detected.push_back(objects[i].times_detected);
                     if(!objects[i].picked){
                         bool okay_dist = true;
                         for(int j = 0; j < pos_best_objects_gripped.size(); j++){

@@ -244,7 +244,7 @@ def detect_object(image):
                                     draw_result([roi_x,roi_y, roi_w, roi_h], image, (255,0,0)) 
                                     
                                     '''DISTANCE THRESHOLD FOR OBJECT DETECTION'''
-                                    if z_w <= 0.4:
+                                    if z_w <= 0.48:
                                         object_x.append(x_w)
                                         object_y.append(y_w)
                                         object_z.append(z_w)
@@ -478,7 +478,7 @@ def main():
     # Subscriber to depth image
     rospy.Subscriber("/camera/depth/image", Image, callback_depth)
     
-    r = rospy.Rate(5) # Hz
+    r = rospy.Rate(10) # Hz
     while not rospy.is_shutdown():
         # Parameters for local map
         object_x = []
