@@ -20,6 +20,10 @@ using namespace std;
 //Global variables needed for this node
 int number_objects;
 geometry_msgs::Twist current_robot_vel;
+bool close_to_best_object = false;
+int best_object_index;
+bool flag_best_object_pub = false;
+geometry_msgs::PointStamped best_object_TO_GRIP;
 
 //Global int parameters of the values of the objects
 int ncolors = 6;
@@ -363,6 +367,7 @@ void analyze_objects(object_saving::objects_found objects_found){
             int previous_size = objects.size();
             vector<int> objects_same(previous_size,0);
             vector<int> objects_same_detected(previous_size,0);
+            
             for(int q = 0; q < objects_found_temp.number_of_objects;q++){
             //Compare if it's the same object, not taking into account the closest ones
                 if((!std::isnan(objects_found_temp.array_objects_found[q].point.x)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.y)) && (!std::isnan(objects_found_temp.array_objects_found[q].point.z))){
@@ -469,6 +474,34 @@ void analyze_objects(object_saving::objects_found objects_found){
             }
         }
     }
+    if (close_to_best_object){
+        int best_shape_value = 0;
+        int best_shape_best_object = 7;
+        int best_shape_current_object = 7;
+        for(int k = 0; k < 8; k++){
+            if(objects[best_object_index].shape[k] > best_shape_value){
+                best_shape_value = objects[best_object_index].shape[k];
+                best_shape_best_object = k;
+            }
+        }
+        for(int j = 0; j < objects.size(); j++){
+            best_shape_value = 0;
+            for(int k = 0; k < 8; k++){
+                if(objects[j].shape[k] > best_shape_value){
+                    best_shape_value = objects[j].shape[k];
+                    best_shape_current_object = k;
+                }
+            }
+            
+            if((objects[j].color == objects[best_object_index].color) && (best_shape_best_object == best_shape_current_object)){
+                if(objects[j].probability >= 55){
+                    flag_best_object_pub = true;
+                    best_object_TO_GRIP = objects[j].map_position;
+                }
+            }
+        }
+        close_to_best_object = false;
+    }
 }
 
 void position_callBack(const object_saving::objects_found objects_found){
@@ -482,52 +515,38 @@ void robot_vel_callBack(const geometry_msgs::Twist robot_vel){
     current_robot_vel = robot_vel;
 }
 
-void gripped_callBack(const std_msgs::String flag_gripped){
-    
-    //-----------HERE CODE FOR CHANGING FLAG OF OBJECT PICKED-------------(
-    float best_value = 0.0;
-    int best_index;
-    for(int i = 0; i < objects.size();i++){
-        if(!objects[i].picked){
-            if(objects[i].real_priority_value > best_value){
-                best_value = objects[i].real_priority_value;
-                best_index = i;
-            }
-        }
-    }
-    if(!std::isnan(best_index)){
-        objects[best_index].picked = true;
-        geometry_msgs::PointStamped pos_best_temp;
-        pos_best_temp = objects[best_index].map_position;
-        pos_best_objects_gripped.push_back(pos_best_temp);
-    } 
-
+void close_to_object_callBack(const object_saving::objects_found best_objects){
+    close_to_best_object = true;
 }
 
-// void identification_callBack(const std::string shape_of_object_detected){
+void set_pick_to_object(int index){
+    if(!std::isnan(index)){
+        objects[index].picked = true;
+        geometry_msgs::PointStamped pos_best_temp;
+        pos_best_temp = objects[index].map_position;
+        pos_best_objects_gripped.push_back(pos_best_temp);
+    } 
+}
 
-//     //-------- EDIT THIS VALUES FOR THE VALUE OF EACH OBJECT IN THE MAZE
-//     int value_of_shape = 1;
-//     if(shape_of_object_detected == "Red Cube") value_of_shape = 10;
-//     else if(shape_of_object_detected == "Red Hollow Cube") value_of_shape = 10;
-//     else if(shape_of_object_detected == "Blue Cube") value_of_shape = 10;
-//     else if(shape_of_object_detected == "Green Cube") value_of_shape = 10;
-//     else if(shape_of_object_detected == "Yellow Cube") value_of_shape = 10;
-//     else if(shape_of_object_detected == "Yellow Ball") value_of_shape = 10;
-//     else if(shape_of_object_detected == "Red Ball") value_of_shape = 10;
-//     else if(shape_of_object_detected == "Red Cylinder") value_of_shape = 10;
-//     else if(shape_of_object_detected == "Green Cylinder") value_of_shape = 10;
-//     else if(shape_of_object_detected == " Green Hollow Cube") value_of_shape = 10;
-//     else if(shape_of_object_detected == "Blue Triangle") value_of_shape = 10;
-//     else if(shape_of_object_detected == "Purple Cross") value_of_shape = 10;
-//     else if(shape_of_object_detected == "Purple Star") value_of_shape = 10;
-//     else if(shape_of_object_detected == "Orange Cross") value_of_shape = 10;
-//     else if(shape_of_object_detected == "Patric") value_of_shape = 10;
-
-//     //-----------HERE THE CODE FOR CHOOSING WHICH OBJECT IS BEING IDENTIFIED----------
-//     ///objects[i].shape = shape_of_object_detected;
-//     //objects[i].value = value_of_shape;
-// }
+void gripped_callBack(const std_msgs::String flag_gripped){
+    set_pick_to_object(best_object_index);
+    // float best_value = 0.0;
+    // int best_index;
+    // for(int i = 0; i < objects.size();i++){
+    //     if(!objects[i].picked){
+    //         if(objects[i].real_priority_value > best_value){
+    //             best_value = objects[i].real_priority_value;
+    //             best_index = i;
+    //         }
+    //     }
+    // }
+    // if(!std::isnan(best_index)){
+    //     objects[best_index].picked = true;
+    //     geometry_msgs::PointStamped pos_best_temp;
+    //     pos_best_temp = objects[best_index].map_position;
+    //     pos_best_objects_gripped.push_back(pos_best_temp);
+    // }
+}
 
 void objects_to_file(vector<map_object> objects_to_write)
 {
@@ -671,13 +690,16 @@ int main(int argc, char **argv)
     ros::Subscriber sub_new_position = n.subscribe("/object_position_map", 1, position_callBack);
     ros::Subscriber sub_new_position_classical = n.subscribe("/object_position_map_classical", 1, position_classical_callBack);
     ros::Subscriber sub_robot_velocity = n.subscribe("/vel", 1, robot_vel_callBack);
-    
+    ros::Subscriber sub_close_to_object = n.subscribe("/flag_path_follower", 1, close_to_object_callBack);
+
     ros::Publisher espeak_pub = n.advertise<std_msgs::String>("/espeak/string", 1);
     ros::Publisher objects_pub = n.advertise<object_saving::objects>("objects_detected", 1);
     ros::Publisher best_object_pub =  n.advertise<geometry_msgs::PointStamped>("/best_object", 1);
+    ros::Publisher best_object_TO_GRIP_pub =  n.advertise<geometry_msgs::PointStamped>("/best_object_TO_GRIP", 1);
     ros::Publisher marker_pub = n.advertise<visualization_msgs::MarkerArray>("/all_objects_marker", 1);
     ros::Publisher best_marker_pub = n.advertise<visualization_msgs::Marker>("/best_objects_marker", 1);
     ros::Publisher current_marker_pub = n.advertise<visualization_msgs::MarkerArray>("/current_objects_marker", 1);
+
 
     int counter_write_file = 0;
     int counter_read_file = 1;
@@ -959,6 +981,11 @@ int main(int argc, char **argv)
                 best_marker_pub.publish(best_marker);
                 objects_pub.publish(temp_objects);
                 best_object_pub.publish(objects[best_index].map_position);
+
+                if(flag_best_object_pub){
+                    flag_best_object_pub = false;
+                    best_object_TO_GRIP_pub.publish(best_object_TO_GRIP);
+                }
             } 
         }
 
