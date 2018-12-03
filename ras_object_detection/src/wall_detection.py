@@ -39,13 +39,20 @@ class Wall_Detection:
         self.pub_wall_detection = rospy.Publisher('/wall_detection', std_msgs.msg.Bool, queue_size=1)
         self.pub_wall_position = rospy.Publisher('/wall_position', PoseArray, queue_size=1)
         self.pub_vel = rospy.Publisher('/keyboard/vel', Twist, queue_size=1)
-
+        
         rospy.Subscriber('/scan', sensor_msgs.msg.LaserScan, self.callback_laser)
+        rospy.Subscriber('/wall_disable', std_msgs.msg.String, self.callback_disable)
 
         self.rate = rospy.Rate(10)
         self.listenser = tf.TransformListener()
+        self.flag_disable = False
         
-
+    #####################################################
+    #                 Disable_Callback                  #
+    #####################################################
+    def callback_laser(self,scan):
+        
+        
     #####################################################
     #                   Laser_Callback                  #
     #####################################################
