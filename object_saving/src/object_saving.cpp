@@ -670,6 +670,7 @@ int main(int argc, char **argv)
     ros::Publisher objects_pub = n.advertise<object_saving::objects>("objects_detected", 1);
     ros::Publisher best_object_pub =  n.advertise<geometry_msgs::PointStamped>("/best_object", 1);
     ros::Publisher marker_pub = n.advertise<visualization_msgs::MarkerArray>("/all_objects_marker", 1);
+    ros::Publisher best_marker_pub = n.advertise<visualization_msgs::Marker>("/best_objects_marker", 1);
     ros::Publisher current_marker_pub = n.advertise<visualization_msgs::MarkerArray>("/current_objects_marker", 1);
 
     int counter_write_file = 0;
@@ -948,6 +949,7 @@ int main(int argc, char **argv)
                 //------HERE CODE TO PUBLISH ARRAY OF OBJECTS INTO RVIZ-------
                 marker_pub.publish(markers);
                 current_marker_pub.publish(markers_current);
+                best_marker_pub.publish(best_marker);
                 objects_pub.publish(temp_objects);
                 best_object_pub.publish(objects[best_index].map_position);
             } 
