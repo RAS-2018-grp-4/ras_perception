@@ -68,17 +68,18 @@ class Frame:
 lastFrame = Frame()
 
 # Load SHAPE CNN
-json_file = open('/home/ras14/catkin_ws/src/ras_perception/DL_training/KERAS_model/saved_models/cropped_shape_2.json', 'r')
+json_file = open('/home/ras14/catkin_ws/src/ras_perception/DL_training/KERAS_model/saved_models/cropped_shape_3.json', 'r')
 loaded_model_json = json_file.read()
 json_file.close()
 model_shape = model_from_json(loaded_model_json)
-model_shape.load_weights('/home/ras14/catkin_ws/src/ras_perception/DL_training/KERAS_model/saved_models/cropped_shape_2.h5')
+model_shape.load_weights('/home/ras14/catkin_ws/src/ras_perception/DL_training/KERAS_model/saved_models/cropped_shape_3.h5')
 # Load COLOR CNN
-model_color = keras.models.load_model('/home/ras14/catkin_ws/src/ras_perception/DL_training/KERAS_model/saved_models/keras_cropped_color_1.h5')
+model_color = keras.models.load_model('/home/ras14/catkin_ws/src/ras_perception/DL_training/KERAS_model/saved_models/keras_cropped_color_2.h5')
 
 # Define classes for color and shape
 shape_class = ['Ball', 'Cube', 'Cylinder', 'Hollow Cube', 'Cross', 'Triangle', 'Star', 'Nothing' ]
-color_class = ['Yellow', 'Green', 'Orange', 'Red', 'Blue', 'Purple', 'Nothing']
+#color_class = ['Yellow', 'Green', 'Orange', 'Red', 'Blue', 'Purple', 'Nothing']
+color_class = ['Yellow', 'Green', 'Orange', 'Red', 'Blue', 'Purple']
 
 VIDEO_INFERENCE = 0
 IMG_INFERNECE = 0
@@ -192,7 +193,7 @@ def detect_object(image):
 
         # find contours
         _, contours, _ = cv2.findContours(mask_morph, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        contour_sizes = [(cv2.contourArea(contour)>2000) for contour in contours]
+        contour_sizes = [(cv2.contourArea(contour)>1200) for contour in contours]
         ind_temp = np.argwhere(contour_sizes)
         
         for k in range(ind_temp.shape[0]):
@@ -200,7 +201,7 @@ def detect_object(image):
             
             xx, yy, w, h = cv2.boundingRect(largest_contours)
 
-            if float(h)/w > 0.8 and float(h)/w<1.2:
+            if float(h)/w > 0.8 and float(h)/w<1.3:
                 roi_x = max(0, int(xx - expansion_param*w))
                 roi_y = max(0, int(yy - expansion_param*h))
                 roi_w = int(w*(1+2*expansion_param))
@@ -219,41 +220,41 @@ def detect_object(image):
 
                 pred_color_label = np.argmax(pred_color)
                 
-                if pred_color_label != 6:   #NOTHING color
-                    if(pred_color_label == color_label):
-                        pred_shape = model_shape.predict(input_img)
+                #if pred_color_label != 6:   #NOTHING color
+                if(pred_color_label == color_label):
+                    pred_shape = model_shape.predict(input_img)
 
-                        pred_shape_label = np.argmax(pred_shape)
-                        
-                        if pred_shape_label != 7:    #NOTHING shape
-                            '''CHECK IF COMBINED SHAPE + COLOR LABEL IS A VALID COMBINATION'''
-                            if VALID_OBJECT[pred_shape_label][pred_color_label]==1:
-                                #print(cv2.contourArea(largest_contours))
-                                # Get world coordinates of detected object from depth image 
-                                bBox_temp = [xx, yy, w, h]
-                                # Define a square kernel for depth measurement 
-                                depth_square = lastFrame.depth_registered[int(-square_size+round(yy+h/2)):int(square_size+round(yy+h/2)),int(-square_size+round(xx+w/2)):int(square_size+round(xx+w/2))]
+                    pred_shape_label = np.argmax(pred_shape)
+                    
+                    if pred_shape_label != 7:    #NOTHING shape
+                        '''CHECK IF COMBINED SHAPE + COLOR LABEL IS A VALID COMBINATION'''
+                        if VALID_OBJECT[pred_shape_label][pred_color_label]==1:
+                            #print(cv2.contourArea(largest_contours))
+                            # Get world coordinates of detected object from depth image 
+                            bBox_temp = [xx, yy, w, h]
+                            # Define a square kernel for depth measurement 
+                            depth_square = lastFrame.depth_registered[int(-square_size+round(yy+h/2)):int(square_size+round(yy+h/2)),int(-square_size+round(xx+w/2)):int(square_size+round(xx+w/2))]
 
-                                #if bBox_temp !=None:
-                                try:
-                                    # get the depth of center of detected bbox
-                                    #x_w, y_w, z_w = get_world_coord_rgb(bBox_temp)                                
-                                    x_w, y_w, z_w = get_world_coord_rgb(bBox_temp,depth_square)
+                            #if bBox_temp !=None:
+                            try:
+                                # get the depth of center of detected bbox
+                                #x_w, y_w, z_w = get_world_coord_rgb(bBox_temp)                                
+                                x_w, y_w, z_w = get_world_coord_rgb(bBox_temp,depth_square)
 
-                                    draw_result([xx,yy,w,h], image, (0,255,0), pred_shape_label, pred_color_label, z_w)
-                                    draw_result([roi_x,roi_y, roi_w, roi_h], image, (255,0,0)) 
-                                    
-                                    '''DISTANCE THRESHOLD FOR OBJECT DETECTION'''
-                                    if z_w <= 0.48:
-                                        object_x.append(x_w)
-                                        object_y.append(y_w)
-                                        object_z.append(z_w)
-                                        object_shape.append(pred_shape_label)
-                                        object_color.append(pred_color_label)
-                                except:
-                                    pass
-                                    #print('wierd error!')
-    
+                                draw_result([xx,yy,w,h], image, (0,255,0), pred_shape_label, pred_color_label, z_w)
+                                draw_result([roi_x,roi_y, roi_w, roi_h], image, (255,0,0)) 
+                                
+                                '''DISTANCE THRESHOLD FOR OBJECT DETECTION'''
+                                if z_w <= 0.45:
+                                    object_x.append(x_w)
+                                    object_y.append(y_w)
+                                    object_z.append(z_w)
+                                    object_shape.append(pred_shape_label)
+                                    object_color.append(pred_color_label)
+                            except:
+                                pass
+                                #print('wierd error!')
+
     local_map = np.array((object_x, object_y, object_z, object_shape, object_color)).T
 
     obj_array = objects_found()
@@ -349,10 +350,11 @@ def detect_battery(rgb_img, depth_img):
             if float(h)/w >0.4:
                 cv2.rectangle(rgb_img, (xx, yy), (xx+w, yy+h), (0,0,255), 2)
             
-                # Define a square kernel for depth measurement 
-                depth_square = lastFrame.depth_registered[int(-square_size+round(yy+h/2)):int(square_size+round(yy+h/2)),int(-square_size+round(xx+w/2)):int(square_size+round(xx+w/2))]
-                cv2.rectangle(rgb_img, (int(xx+w/2)-square_size, int(yy+h/2)-square_size), (int(xx+w/2)+square_size, int(yy+h/2)+square_size), (255,0,0), 3)
                 try:
+                    # Define a square kernel for depth measurement 
+                    depth_square = lastFrame.depth_registered[int(-square_size+round(yy+h/2)):int(square_size+round(yy+h/2)),int(-square_size+round(xx+w/2)):int(square_size+round(xx+w/2))]
+                    cv2.rectangle(rgb_img, (int(xx+w/2)-square_size, int(yy+h/2)-square_size), (int(xx+w/2)+square_size, int(yy+h/2)+square_size), (255,0,0), 3)
+                
                     x_w, y_w, z_w = get_world_coord_rgb([xx, yy, w, h],depth_square)
 
                     '''DISTANCE THRESHOLD FOR BATTERY DETECTION'''

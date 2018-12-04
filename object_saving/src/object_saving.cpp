@@ -50,6 +50,7 @@ class map_object{
     bool picked;
     int times_detected;
     bool object_spoken;
+    bool object_firstly_spoken;
 
     map_object();
     map_object(geometry_msgs::PointStamped, int, int,float);
@@ -69,6 +70,7 @@ map_object::map_object(void){
     picked = false;
     times_detected = 0;
     object_spoken = false;
+    object_firstly_spoken = false;
 }
 
 //Constructor overloaded with known position, color and shape
@@ -191,6 +193,7 @@ map_object::map_object(geometry_msgs::PointStamped position, int this_color, int
     probability = 50;
     map_position = position;
     object_spoken = false;
+    object_firstly_spoken = false;
 }
 
 std::vector<map_object> objects;
@@ -282,6 +285,10 @@ void get_object_to_speak(int color, int shape){
                     break;
             }
             break;
+        case 6:
+        //It's been detected twice
+            what_to_speak.data = "Found an object";
+            break;
 
     }
 
@@ -291,7 +298,7 @@ void analyze_objects(object_saving::objects_found objects_found){
     vector<vector<int> > index_conc;
     object_saving::objects_found objects_found_temp = objects_found;
 
-    if(abs(current_robot_vel.angular.z) < 0.25){
+    if(abs(current_robot_vel.angular.z) < 1.7){
 
         //Robustness against same object detected in two bounding boxes
         for(int j = 0; j < objects_found.number_of_objects;j++){
@@ -438,14 +445,20 @@ void analyze_objects(object_saving::objects_found objects_found){
                         objects[q].value = values_objects[objects[q].color][best_shape_index];
                         objects[q].real_priority_value = (objects[q].value / objects[q].distance)*pow(objects[q].times_detected, 0.33);
                         objects[q].times_detected += 1;
-                        if(number_shape_identified >= 5){
+                        if(number_shape_identified >= 3){
                             //Object has been identified 5 times already. The speaker says the object
                             if(!objects[q].object_spoken){
                                 get_object_to_speak(objects[q].color, best_shape_index);
                                 objects[q].object_spoken = true;
                                 speak_object_detected = true;
+                            } 
+                        }
+                        else if(number_shape_identified >= 1){
+                            if(!objects[q].object_firstly_spoken){
+                                get_object_to_speak(6, best_shape_index);
+                                objects[q].object_firstly_spoken = true;
+                                speak_object_detected = true;
                             }
-                            
                         }
                     }
                 } 
@@ -724,7 +737,7 @@ int main(int argc, char **argv)
             }
         }
 
-        if (counter_read_file >= 60){
+        if (counter_read_file >= 100){
             std::ifstream ifile;
             ifile.open("/home/ras14/catkin_ws/src/round1objects.txt");
             if ((bool)ifile)
@@ -898,13 +911,14 @@ int main(int argc, char **argv)
                 best_marker.color.b = 0.82f;
                 best_marker.lifetime = ros::Duration(0.25);
 
+
                 vector<map_object> objects_current;
                 for(int i = 0; i < objects.size();i++){
                     if(objects[i].probability > 50){
                         objects_current.push_back(objects[i]);
                     }
                 }
-                //cout<<"I'm here"<< endl;
+                
                 markers_current.markers.resize(objects_current.size());
                 for(int i = 0; i < objects_current.size(); i++){
                     markers_current.markers[i].header.frame_id = "/map";

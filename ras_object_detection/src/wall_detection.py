@@ -54,7 +54,7 @@ class Wall_Detection:
     def callback_disable(self,msg):
         if msg.data == "disable":
             self.flag_disable = True
-        elif msg.data == "able"
+        elif msg.data == "able":
             self.flag_disable = False
         
     #####################################################
